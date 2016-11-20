@@ -4,6 +4,8 @@ module Fish.Lang.Lang where
 import qualified Data.Text as T
 import Data.Bifunctor
 
+type S = T.Text
+
 data Prog t = Prog t [CompStmt t]
   deriving (Eq,Ord,Show,Functor)
 
@@ -58,8 +60,6 @@ data Glob =
   | DiStarGl
   | QMarkGl
   deriving (Eq,Ord,Show)
-
-type S = T.Text
 
 data VarIdent t = VarIdent t S
   deriving (Eq,Ord,Show,Functor)
