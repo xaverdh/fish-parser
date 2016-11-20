@@ -224,34 +224,38 @@ homeDirE = char '~' $> HomeDirE () <?> "~"
 redirect :: PC m => P m (Redirect ())
 redirect =
   choice [ to, from, err ] <?> "redirection"
-  where
-    appendBit :: PC m => Char -> P m Append
-    appendBit c = option False (char c $> True)
+  where    
+    outRedirect start app = start *>
+      parseEither (char '&' *> fd)
+      ( (,)
+        <$> option False (app $> True)
+        <*> ( spaces *> expr <* spaces ) )
     
-    err = char '^' *> (
-        Redirect (Right StdErrFd)
-        <$> parseEither (char '&' *> fd) (
-            (,)
-            <$> appendBit '^'
-            <*> (spaces *> expr <* spaces)
-          )
-      ) <?> "stderr-redirection"
+    startErr = try
+      ( string "2>"
+        <* notFollowedBy (char '|') )
+    err = Redirect (Right StdErrFd)
+      <$> ( outRedirect (char '^') (char '^')
+            <|> outRedirect startErr (char '>') )
+      <?> "stderr-redirection"
     
-    to =
-      (char '>' <* notFollowedBy (char '|')) *> (
-        Redirect (Right StdOutFd)
-        <$> parseEither (char '&' *> fd) (
-            (,)
-            <$> appendBit '>'
-            <*> (spaces *> expr <* spaces)
-          )
-      ) <?> "stdout-redirection"
+    startTo = try
+      ( skipOptional (char '1')
+        *> char '>'
+        <* notFollowedBy (char '|') )
     
-    from =
-      char '<' *> (
-        Redirect (Left StdInFd)
-        . Right . (False,) <$> (spaces *> expr <* spaces)
-      ) <?> "stdin-redirection"
+    to = Redirect (Right StdOutFd)
+      <$> outRedirect startTo (char '>')
+      <?> "stdout-redirection"
+    
+    startFrom = try
+      ( skipOptional (char '0')
+        *> char '<' )
+    
+    from = startFrom *>
+      ( Redirect (Left StdInFd) . Right . (False,)
+        <$> ( spaces *> expr <* spaces ) )
+      <?> "stdin-redirection"
 
 ref :: PC m => P m i -> P m (Ref i)
 ref q = withContext array $
@@ -362,7 +366,7 @@ strNQ = do
       "\n\t $\\*?~%#(){}[]<>^&;,\"\'|012" <> bool "" "." ar
     allowed ar =
       noneOf' (invalid ar)
-      <|> try ( oneOf' "012" <* notFollowedBy (char '>') )
+      <|> try ( oneOf' "012" <* notFollowedBy (oneOf' "><") )
     escPass =
       (escapeSequence <$> oneOf' "ntfrvab")
       <|> noneOf' "ec\n"
@@ -397,5 +401,4 @@ cmdIdent = (CmdIdent () . pack)
   <?> "command-identifier"
   where
     noTermString = mfilter $ not . (`elem` ["end","else"])
-
 
