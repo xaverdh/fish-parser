@@ -37,22 +37,20 @@ args = Args ()
 compStmt :: PC m => P m (CompStmt ())
 compStmt = do
   st <- stmt
-  option (Simple () st) (try (piped st) <|> try (forked st))
+  option (Simple () st)
+    ( spaces *>
+      ( piped st <|> forked st ) )
   where
     piped st = Piped ()
-      <$> (
-          spaces *>
-          option StdOutFd (outFd <* char '>')
-          <* char '|'
-          <* spaces
-        )
+      <$> ( try 
+            ( option StdOutFd (outFd <* char '>')
+              <* char '|' ) <* spaces )
       <*> return st
       <*> compStmt
       <?> "pipe"
 
     forked st =
-      spaces
-      *> char '&'
+      char '&'
       *> spaces
       $> Forked () st
       <?> "fork-symbol"
