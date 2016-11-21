@@ -4,6 +4,9 @@ module Fish.UnParser.UnParser where
 import Data.Monoid
 import Control.Applicative
 import Fish.Lang.Lang
+import Fish.UnParser.Quote
+
+quote = quoteSQ
 
 mintCal :: Monoid m => m -> [m] -> m
 mintCal s = \case
@@ -150,7 +153,7 @@ unparseRedirectedSt st redirs =
 
 instance Unparse (Expr t) where
   unparse = \case
-    StringE _ s -> s
+    StringE _ s -> quote s
     GlobE _ g -> unparse g
     ProcE _ e -> unparse e
     HomeDirE _ -> "~"
