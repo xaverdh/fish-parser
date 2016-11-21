@@ -1,8 +1,6 @@
 {-# language LambdaCase, OverloadedStrings #-}
 module Fish.UnParser.UnParser where
 
-import qualified Data.Text as T
-import qualified Data.List as L
 import Data.Monoid
 import Control.Applicative
 import Fish.Lang.Lang
@@ -74,7 +72,7 @@ unparseCmdSt cmdi args =
   unparse cmdi <> " "
   <> unparse args
 
-unparseSetSt :: Maybe ((VarDef t),(Args t)) -> S
+unparseSetSt :: Maybe (VarDef t,Args t) -> S
 unparseSetSt = \case
   Nothing -> "set"
   Just (vdef,args) ->
@@ -173,7 +171,7 @@ instance Unparse (VarDef t) where
 
 instance Unparse (VarRef t) where
   unparse (VarRef _ name ref) = 
-    (either unparse unparse) name
+    either unparse unparse name
     <> unparseRef ref
 
 unparseRef :: Unparse i => Ref i -> S
