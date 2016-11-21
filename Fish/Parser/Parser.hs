@@ -14,6 +14,7 @@ import Data.Functor
 import Data.Bool
 import Data.Monoid
 import Data.CharSet
+import qualified Data.Char as C
 import qualified Data.Text as T
 import Data.String (IsString(..))
 import Control.Applicative
@@ -366,8 +367,9 @@ strNQ = do
       noneOf' (invalid ar)
       <|> try ( oneOf' "012" <* notFollowedBy (oneOf' "><") )
     escPass =
-      (escapeSequence <$> oneOf' "ntfrvab")
-      <|> noneOf' "ec\n"
+      (escapeSequence <$> oneOf' "ntfrvabe")
+      <|> try (char 'c' *> anyChar >>= controlSequence)
+      <|> notChar '\n'
     escSwallow = char '\n'
     escIgnore = mzero
     allowEmpty = False
@@ -381,6 +383,22 @@ strNQ = do
       'v' -> '\v'
       'a' -> '\a'
       'b' -> '\b'
+      'e' -> C.chr 0x1B
+    
+    controlSequence :: MonadPlus m => Char -> m Char
+    controlSequence = \case
+      '@'  -> return (C.chr 0)
+      '['  -> return (C.chr 0x1B)
+      '\\' -> return (C.chr 0x1C)
+      ']'  -> return (C.chr 0x1D)
+      '^'  -> return (C.chr 0x1E)
+      '_'  -> return (C.chr 0x1F)
+      '?'  -> return (C.chr 0x7F)
+      c -> 
+        let i = C.ord c - C.ord 'a'
+         in if i >= 0 && i <= C.ord 'z'
+            then return (C.chr i)
+            else mzero
 
 varIdent :: PC m => P m (VarIdent ())
 varIdent = (VarIdent () . pack)
