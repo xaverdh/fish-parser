@@ -64,7 +64,7 @@ stmtSep = do
         <|> (void . lookAhead) (char '#' <?> "comment") )
   <?> "statement seperator"
   where
-    sep = oneOf "\n;"
+    sep = satisfy (=='\n') || satisfy (==';')
     seps1 = skipSome sep
     
 
