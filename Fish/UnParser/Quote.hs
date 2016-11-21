@@ -11,19 +11,19 @@ import Data.Monoid
 quoteSQ :: T.Text -> T.Text
 quoteSQ s =
   "'" <>
-  q ['\'','\\'] s
+  (tr . q ['\'','\\']) s
   <> "'"
 
 quoteDQ :: Int -> T.Text -> T.Text
 quoteDQ n s =
   "\"" <>
-  (wrap n . q ['\n','$','"','\\']) s
+  (wrap n . tr  . q ['$','"','\\']) s
   <> "\""
 
 quoteNQ :: Int -> T.Text -> T.Text
-quoteNQ n = wrap n . q cs
+quoteNQ n = wrap n . tr . q cs
   where
-    cs = "\n\t\f\r\v\a\b $\\*?~%#(){}[]<>^&;,\"'|012."
+    cs = " $\\*?~%#(){}[]<>^&;,\"'|012."
 
 q :: [Char] -> T.Text -> T.Text
 q xs = T.concatMap quoteChar
@@ -31,6 +31,30 @@ q xs = T.concatMap quoteChar
     quoteChar x
       | x `elem` xs = '\\' `T.cons` x `T.cons` T.empty
       | otherwise = x `T.cons` T.empty
+
+tr :: T.Text -> T.Text
+tr = mconcat (T.map trChar)
+  where
+    trChar = \case
+      '\n' -> "\\n"
+      '\t' -> "\\t"
+      '\f' -> "\\f"
+      '\r' -> "\\r"
+      '\v' -> "\\v"
+      '\a' -> "\\a"
+      '\b' -> "\\b"
+      c -> case C.ord c of
+        0 -> "\\c@"
+        0x1B -> "\\c["
+        0x1C -> "\\c\\"
+        0x1D -> "\\c]"
+        0x1E -> "\\c^"
+        0x1F -> "\\c_"
+        0x7F -> "\\c?"
+        i -> if i >= 0 && i <= C.ord 'z'
+             then "\\c" <> (T.singleton . C.chr) (C.ord 'a' + i)
+             else T.singleton c
+
 
 wrap :: Int -> T.Text -> T.Text
 wrap n =
