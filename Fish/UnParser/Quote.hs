@@ -1,4 +1,4 @@
-{-# language OverloadedStrings #-}
+{-# language OverloadedStrings, LambdaCase #-}
 module Fish.UnParser.Quote (
   quoteSQ
   ,quoteDQ
@@ -6,6 +6,7 @@ module Fish.UnParser.Quote (
 ) where
 
 import qualified Data.Text as T
+import qualified Data.Char as C
 import Data.Monoid
 
 quoteSQ :: T.Text -> T.Text
@@ -33,7 +34,7 @@ q xs = T.concatMap quoteChar
       | otherwise = x `T.cons` T.empty
 
 tr :: T.Text -> T.Text
-tr = mconcat (T.map trChar)
+tr = T.concatMap trChar
   where
     trChar = \case
       '\n' -> "\\n"
