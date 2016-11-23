@@ -20,8 +20,8 @@ import Control.Lens hiding (Context)
 type P = ReaderT Context
 
 -- | The parsing "Monad". We use ConstraintKinds instead of
--- | a concrete Monad to keep the code polymorphic over the 
--- | parsing framework (Parsec,Trifecta etc.).
+--   a concrete Monad to keep the code polymorphic over the 
+--   parsing framework (Parsec,Trifecta etc.).
 type PC m = 
   ( Functor m
     ,Applicative m
@@ -34,9 +34,9 @@ type PC m =
     ,LookAheadParsing m )
 
 -- | The parser 'Context':
--- | '_quoted' is toggled by entering a double quote type string,
--- | '_array' is toggled by entering an array index expression [..]
--- | '_cmdSubst' is toggled by entering a command substitution (..)
+--   '_quoted' is toggled by entering a double quote type string,
+--   '_array' is toggled by entering an array index expression [..]
+--   '_cmdSubst' is toggled by entering a command substitution (..)
 data Context = Context {
     _quoted :: Bool
     ,_array :: Bool
@@ -47,14 +47,14 @@ makeLenses ''Context
 -- | The starting 'Context'.
 defaultContext = Context False False False
 
--- | The toggle a 'Context' switch ON.
+-- | Toggle a 'Context' switch ON.
 withContext l = local (l .~ True)
 
--- | The toggle a 'Context' switch OFF.
+-- | Toggle a 'Context' switch OFF.
 resetContext l = local (l .~ False)
 
 -- | We define our own pack function, so the underlying type
--- | for string data is easily changed.
+--   for string data is easily changed.
 pack :: String -> T.Text
 pack = T.pack
 
@@ -62,17 +62,17 @@ instance IsString CharSet where
   fromString = fromList
 
 -- | An alias, such that the underlying implementation
--- | can be switched between CharSet and plain noneOf.
+--   can be switched between CharSet and plain noneOf.
 noneOf' :: PC m => CharSet -> P m Char
 noneOf' = noneOfSet
 
 -- | An alias, such that the underlying implementation
--- | can be switched between CharSet and plain oneOf.
+--   can be switched between CharSet and plain oneOf.
 oneOf' :: PC m => CharSet -> P m Char
 oneOf' = oneOfSet
 
 -- | The space parser, accepts all space (as in Char.isSpace),
--- | except for the newline character.
+--   except for the newline character.
 space :: PC m => P m Char
 space = 
   try (char '\\' *> char '\n')
@@ -84,46 +84,46 @@ spaces :: PC m => P m ()
 spaces = skipMany space <?> "space"
 
 -- | Skip any number of spaces, but fail unless
--- | at least one space was consumed.
+--   at least one space was consumed.
 spaces1 :: PC m => P m ()
 spaces1 = skipSome space <?> "space"
 
 -- | Turn a parser into a lexeme unit, which will not consume any
--- | input on failure and swallow following white space on success.
+--   input on failure and swallow following white space on success.
 lexeme :: PC m => P m a -> P m a
 lexeme p = try p <* spaces
 
 -- | Same a lexeme but only succeed if at least one
--- | white space was consumed.
+--   white space was consumed.
 lexeme1 :: PC m => P m a -> P m a
 lexeme1 p = try (p <* spaces1)
 
 -- | Same a lexeme but only succeed if either at least one
--- | white space was consumed, or the next character is
--- | of a special class, considered "terminating" characters.
--- | Currently these are \\n ; ) | > \^ \< #
+--   white space was consumed, or the next character is
+--   of a special class, considered "terminating" characters.
+--   Currently these are \\n ; ) | > \^ \< #
 lexemeN :: PC m => P m a -> P m a
 lexemeN p = try (p <* (spaces1 <|> (void . lookAhead) sep))
   where
     sep = oneOf' "\n;)|>^<#"
 
 -- | Turn a string into a 'lexeme' parser, parsing that string
--- | and returning ()
+--   and returning ()
 sym :: PC m => String -> P m ()
 sym = lexeme . void . string
 
 -- | Turn a string into a 'lexeme1' parser, parsing that string
--- | and returning ()
+--   and returning ()
 sym1 :: PC m => String -> P m ()
 sym1 = lexeme1 . void . string
 
 -- | Turn a string into a 'lexemeN' parser, parsing that string
--- | and returning ()
+--   and returning ()
 symN :: PC m => String -> P m ()
 symN = lexemeN . void . string
 
 -- | Skip over a number of statement seperators, the meaning
--- | of which depends on the cmdSubst 'Context' switch.
+--   of which depends on the cmdSubst 'Context' switch.
 stmtSep :: PC m => P m ()
 stmtSep = do
   c <- view cmdSubst
@@ -136,8 +136,8 @@ stmtSep = do
     seps1 = skipSome sep
 
 -- | Skip over a number of statement seperators, the meaning
--- | of which depends on the cmdSubst 'Context' switch.
--- | Make sure at least one newline / semicolon was consumed.
+--   of which depends on the cmdSubst 'Context' switch.
+--   Make sure at least one newline / semicolon was consumed.
 stmtSep1 :: PC m => P m ()
 stmtSep1 = do
   c <- view cmdSubst
