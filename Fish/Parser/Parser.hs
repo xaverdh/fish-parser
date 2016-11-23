@@ -13,10 +13,8 @@ import Text.Parser.Char hiding (space,spaces)
 import Data.Functor
 import Data.Bool
 import Data.Monoid
-import Data.CharSet
 import qualified Data.Char as C
 import qualified Data.Text as T
-import Data.String (IsString(..))
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
@@ -26,13 +24,20 @@ program :: PC m => m (Prog ())
 program = (prog <* eof) `runReaderT` defaultContext
 
 prog :: PC m => P m (Prog ())
-prog = Prog ()
-  <$> (compStmt `engulfedIn` stmtSep)
+prog = stmtSep *>
+  ( Prog ()
+    <$> (compStmt `sepEndBy` stmtSep1) )
+  <?> "code-block"
+
+progN :: PC m => P m (Prog ())
+progN = stmtSep1 *>
+  ( Prog ()
+    <$> (compStmt `sepEndBy` stmtSep1) )
   <?> "code-block"
 
 args :: PC m => P m (Args ())
 args = Args ()
-  <$> (expr `engulfedIn` spaces1)
+  <$> (expr `sepEndBy` spaces1)
   <?> "expressions"
 
 compStmt :: PC m => P m (CompStmt ())
@@ -43,16 +48,15 @@ compStmt = do
       ( piped st <|> forked st ) )
   where
     piped st = Piped ()
-      <$> ( try 
-            ( option StdOutFd (outFd <* char '>')
-              <* char '|' ) <* spaces )
+      <$> ( sym "|" $> StdOutFd
+            <|> sym "1>|" $> StdOutFd 
+            <|> sym "2>|" $> StdErrFd )
       <*> return st
       <*> compStmt
       <?> "pipe"
 
     forked st =
-      char '&'
-      *> spaces
+      sym "&"
       $> Forked () st
       <?> "fork-symbol"
 
@@ -62,7 +66,7 @@ stmt = do
   option st $ try (RedirectedSt () st <$> redirections)
   <?> "statement"
   where
-    redirections = some (spaces *> redirect) <?> "redirection"
+    redirections = some redirect <?> "redirection"
     plain = choice [
         commentSt
         ,setSt
@@ -85,84 +89,83 @@ commentSt = (CommentSt () . pack)
 
 cmdSt :: PC m => P m (Stmt ())
 cmdSt = CmdSt ()
-  <$> cmdIdent
+  <$> lexemeN cmdIdent
   <*> args
   <?> "command-statement"
 
 setSt :: PC m => P m (Stmt ())
-setSt = SetSt () <$> try
-    ( string "set" *> optional
-      ( spaces1 *>
-        ( (,) <$> varDef <*> args ) ) )
+setSt = symN "set" *>
+  ( SetSt ()
+    <$> optional
+    ( (,) <$> lexemeN varDef <*> args ) )
   <?> "variable-definition"
 
 funSt :: PC m => P m (Stmt ())
-funSt = try (string "function" *> spaces1) *> (
+funSt = sym1 "function" *> (
     FunctionSt ()
-    <$> funIdent
+    <$> lexemeN funIdent
     <*> args
-    <*> prog
-  ) <* string "end"
+    <*> progN
+  ) <* symN "end"
   <?> "function-statement"
 
 whileSt :: PC m => P m (Stmt ())
-whileSt = try (string "while" *> spaces1) *>
+whileSt = sym1 "while" *>
   (WhileSt ()
     <$> stmt
-    <*> prog <* string "end")
+    <*> progN <* symN "end")
   <?> "while-statement"
 
 forSt :: PC m => P m (Stmt ())
-forSt = try (string "for" *> spaces1) *>
+forSt = sym1 "for" *>
   ( ForSt ()
-    <$> (varIdent <* spaces1 <* string "in")
-    <*> (spaces1 *> args)
-    <*> prog ) <* string "end"
+    <$> (lexeme1 varIdent <* sym1 "in")
+    <*> args
+    <*> progN ) <* symN "end"
   <?> "for-statement"
 
 ifSt :: PC m => P m (Stmt ())
 ifSt =
   ( IfSt ()
     <$> ((:) <$> ifblock <*> many elif)
-    <*> optional el ) <* string "end"
+    <*> optional el ) <* symN "end"
   <?> "if-statement"
   where
-    ifblock = try (string "if" *> spaces1) *>
-      ((,) <$> stmt <*> prog)
+    ifblock = sym1 "if" *>
+      ((,) <$> stmt <*> progN)
     elif =
-      try ( string "else" *> spaces1
-      *> string "if" *> space )
-      *> ((,) <$> stmt <*> prog)
-    el = try (string "else") *> prog
+      lexeme1 (string "else" *> spaces1 *> string "if")
+      *> ((,) <$> stmt <*> progN)
+    el = symN "else" *> progN
 
 switchSt :: PC m => P m (Stmt ())
-switchSt = try (string "switch" *> spaces1)
-  *> ( SwitchSt () <$> (expr <* stmtSep) <*> many switchCase )
-  <* string "end"
+switchSt = sym1 "switch" *>
+  ( SwitchSt ()
+    <$> lexemeN expr <*> (stmtSep1 *> many switchCase) )
+  <* symN "end"
   <?> "switch-statement"
   where
-    switchCase = try (string "case" *> space) *> (
-        (,) <$> (expr <* stmtSep) <*> prog
-      )
+    switchCase = sym1 "case" *>
+      ( (,) <$> lexemeN expr <*> progN )
 
 beginSt :: PC m => P m (Stmt ())
-beginSt = try (string "begin" *> spaces)
-  *> ( BeginSt () <$> prog )
-  <* string "end"
+beginSt = symN "begin"
+  *> ( BeginSt () <$> progN )
+  <* symN "end"
 
 
 andSt :: PC m => P m (Stmt ())
-andSt = try (string "and" *> spaces1)
+andSt = sym1 "and"
   *> (AndSt () <$> stmt)
   <?> "and-statement"
 
 orSt :: PC m => P m (Stmt ())
-orSt = try (string "or" *> spaces1)
+orSt = sym1 "or"
   *> (OrSt () <$> stmt)
   <?> "or-statement"
 
 notSt :: PC m => P m (Stmt ())
-notSt = try (string "not" *> spaces1)
+notSt = sym1 "not"
   *> (NotSt () <$> stmt)
   <?> "not-statement"
 
@@ -185,7 +188,7 @@ expr = do
             ,homeDirE
             ,procE ] )
 
-    intE = (StringE () . T.pack) <$> some digit <?> "integer"
+    intE = (StringE () . pack) <$> some digit <?> "integer"
 
 varRefE :: PC m => P m (Expr ())
 varRefE = VarRefE ()
@@ -200,7 +203,7 @@ bracesE = BracesE () <$> (
   where
     start = char '{'
     end = char '}' <?> "end of braces-substitution"
-    body = (expr `sepBy1` char ',') <|> (pure <$> expr)
+    body = expr `sepBy` char ','
 
 cmdSubstE :: PC m => P m (Expr ())
 cmdSubstE = CmdSubstE ()
@@ -214,7 +217,7 @@ globE = GlobE ()
 
 procE :: PC m => P m (Expr ())
 procE = ProcE ()
-  <$> (char '%' *> expr)
+  <$> (char '%' *> lexemeN expr)
   <?> "process-expansion"
 
 homeDirE :: PC m => P m (Expr ())
@@ -223,16 +226,17 @@ homeDirE = char '~' $> HomeDirE () <?> "~"
 redirect :: PC m => P m (Redirect ())
 redirect =
   choice [ to, from, err ] <?> "redirection"
-  where    
+  where
     outRedirect start app = start *>
       parseEither (char '&' *> fd)
       ( (,)
         <$> option False (app $> True)
-        <*> ( spaces *> expr <* spaces ) )
+        <*> (spaces *> lexemeN expr) )
     
-    startErr = try
+    startErr = 
       ( string "2>"
         <* notFollowedBy (char '|') )
+    
     err = Redirect (Right StdErrFd)
       <$> ( outRedirect (char '^') (char '^')
             <|> outRedirect startErr (char '>') )
@@ -253,26 +257,20 @@ redirect =
     
     from = startFrom *>
       ( Redirect (Left StdInFd) . Right . (False,)
-        <$> ( spaces *> expr <* spaces ) )
+        <$> ( spaces *> lexemeN expr) )
       <?> "stdin-redirection"
 
 ref :: PC m => P m i -> P m (Ref i)
 ref q = withContext array $
-  optional (start *> range <* end)
+  optional (start *> body <* end)
   <?> "array-reference"
   where
-    start = char '[' <?> "index-range"
+    start = sym "[" <?> "index-range"
     end = char ']' <?> "end of index-range"
+    body = range `sepEndBy` spaces1
     range = do
-      spaces
-      some $ do
-        i <- q
-        r <- option (Index i) (
-            Range i <$> (string ".." *> q)
-          )
-        sep
-        return r
-    sep = void spaces1 <|> void (lookAhead (char ']'))
+      i <- q
+      option (Index i) ( Range i <$> (sym ".." *> q) )
 
 cmdRef :: PC m => P m (CmdRef ())
 cmdRef = withContext cmdSubst
@@ -281,7 +279,7 @@ cmdRef = withContext cmdSubst
     <*> ref expr )
   where
     body = start *> prog <* end
-    start = char '(' <?> "command-substitution"
+    start = sym "(" <?> "command-substitution"
     end = char ')' <?> "end of command-substitution"
 
 varRef :: PC m => P m (VarRef ())
@@ -300,16 +298,6 @@ varDef = VarDef ()
   <?> "variable-definition"
   where
     name = varIdent
-
-
-instance IsString CharSet where
-  fromString = fromList
-
-noneOf' :: PC m => CharSet -> P m Char
-noneOf' = noneOfSet
-
-oneOf' :: PC m => CharSet -> P m Char
-oneOf' = oneOfSet
 
 strlike :: PC m => P m (Expr ())
 strlike = 
@@ -402,18 +390,18 @@ strNQ = do
 
 varIdent :: PC m => P m (VarIdent ())
 varIdent = (VarIdent () . pack)
-  <$> try ( (:) <$> letter <*> many alphaNum )
+  <$> ((:) <$> letter <*> many (alphaNum <|> char '_'))
   <?> "variable-identifier"
 
 funIdent :: PC m => P m (FunIdent ())
 funIdent = (FunIdent () . pack)
-  <$> try ( some $ alphaNum <|> oneOf "_-" )
+  <$> some ( alphaNum <|> oneOf "_-" )
   <?> "function-identifier"
 
 cmdIdent :: PC m => P m (CmdIdent ())
 cmdIdent = (CmdIdent () . pack)
-  <$> try ( noTermString
-            ( some $ alphaNum <|> oneOf "/_-" ) )
+  <$> noTermString
+        ( some $ alphaNum <|> oneOf "/_-" )
   <?> "command-identifier"
   where
     noTermString = mfilter $ not . (`elem` ["end","else"])
