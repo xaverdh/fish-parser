@@ -20,7 +20,9 @@ import Control.Lens hiding (Context)
 type P = ReaderT Context
 
 -- | The parsing "Monad". We use ConstraintKinds instead of
---   a concrete Monad to keep the code polymorphic over the 
+--   a concrete Monad 
+--
+--   to keep the code polymorphic over the 
 --   parsing framework (Parsec,Trifecta etc.).
 type PC m = 
   ( Functor m
@@ -34,9 +36,10 @@ type PC m =
     ,LookAheadParsing m )
 
 -- | The parser 'Context':
---   '_quoted' is toggled by entering a double quote type string,
---   '_array' is toggled by entering an array index expression [..]
---   '_cmdSubst' is toggled by entering a command substitution (..)
+--
+--   * '_quoted' is toggled by entering a double quote type string,
+--   * '_array' is toggled by entering an array index expression [..]
+--   * '_cmdSubst' is toggled by entering a command substitution (..)
 data Context = Context {
     _quoted :: Bool
     ,_array :: Bool
@@ -89,19 +92,21 @@ spaces1 :: PC m => P m ()
 spaces1 = skipSome space <?> "space"
 
 -- | Turn a parser into a lexeme unit, which will not consume any
---   input on failure and swallow following white space on success.
+--   input on failure 
+--
+--   and swallow trailing white space on success.
 lexeme :: PC m => P m a -> P m a
 lexeme p = try p <* spaces
 
 -- | Same a lexeme but only succeed if at least one
---   white space was consumed.
+--   trailing white space was consumed.
 lexeme1 :: PC m => P m a -> P m a
 lexeme1 p = try (p <* spaces1)
 
--- | Same a lexeme but only succeed if either at least one
---   white space was consumed, or the next character is
---   of a special class, considered "terminating" characters.
---   Currently these are \\n ; ) | > \^ \< #
+-- | Same a lexeme but only succeed if either:
+--   * at least one trailing white space was consumed
+--   * the next character is of a special class, considered
+--   "terminating" characters. Currently these are \\n ; ) | > \^ \< #
 lexemeN :: PC m => P m a -> P m a
 lexemeN p = try (p <* (spaces1 <|> (void . lookAhead) sep))
   where
@@ -122,8 +127,8 @@ sym1 = lexeme1 . void . string
 symN :: PC m => String -> P m ()
 symN = lexemeN . void . string
 
--- | Skip over a number of statement seperators, the meaning
---   of which depends on the cmdSubst 'Context' switch.
+-- | Skip over a number of statement seperators,
+-- the meaning of which depends on the cmdSubst 'Context' switch.
 stmtSep :: PC m => P m ()
 stmtSep = do
   c <- view cmdSubst
@@ -135,8 +140,10 @@ stmtSep = do
     sep = satisfy $ (||) <$> (== '\n') <*> (==';')
     seps1 = skipSome sep
 
--- | Skip over a number of statement seperators, the meaning
---   of which depends on the cmdSubst 'Context' switch.
+-- | Skip over a number of statement seperators,
+--
+--   the meaning of which depends on the cmdSubst 'Context' switch.
+-- 
 --   Make sure at least one newline / semicolon was consumed.
 stmtSep1 :: PC m => P m ()
 stmtSep1 = do
