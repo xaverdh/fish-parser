@@ -19,11 +19,11 @@ import Control.Lens hiding (Context)
 -- | A Monad Transformer which gives access to the parser 'Context'.
 type P = ReaderT Context
 
--- | The parsing "Monad". We use ConstraintKinds instead of
+-- | The parsing /Monad/. We use ConstraintKinds instead of
 --   a concrete Monad 
 --
 --   to keep the code polymorphic over the 
---   parsing framework (Parsec,Trifecta etc.).
+--   parsing framework ("Parsec","Trifecta" etc.).
 type PC m = 
   ( Functor m
     ,Applicative m
@@ -65,16 +65,16 @@ instance IsString CharSet where
   fromString = fromList
 
 -- | An alias, such that the underlying implementation
---   can be switched between CharSet and plain noneOf.
+--   can be switched between "CharSet" and plain 'noneOf'.
 noneOf' :: PC m => CharSet -> P m Char
 noneOf' = noneOfSet
 
 -- | An alias, such that the underlying implementation
---   can be switched between CharSet and plain oneOf.
+--   can be switched between "CharSet" and plain 'oneOf'.
 oneOf' :: PC m => CharSet -> P m Char
 oneOf' = oneOfSet
 
--- | The space parser, accepts all space (as in Char.isSpace),
+-- | The space parser, accepts all space (as in 'Data.Char.isSpace'),
 --   except for the newline character.
 space :: PC m => P m Char
 space = 
@@ -82,12 +82,12 @@ space =
   <|> satisfy ((&&) <$> C.isSpace <*> (/= '\n'))
   <?> "space-char"
 
--- | Skip any number of spaces.
+-- | Skip any number of 'space' occurances.
 spaces :: PC m => P m ()
 spaces = skipMany space <?> "space"
 
--- | Skip any number of spaces, but fail unless
---   at least one space was consumed.
+-- | Like 'spaces', but fail unless
+--   at least one space character was consumed.
 spaces1 :: PC m => P m ()
 spaces1 = skipSome space <?> "space"
 
@@ -98,15 +98,16 @@ spaces1 = skipSome space <?> "space"
 lexeme :: PC m => P m a -> P m a
 lexeme p = try p <* spaces
 
--- | Same a lexeme but only succeed if at least one
+-- | Same as 'lexeme' but only succeed if at least one
 --   trailing white space was consumed.
 lexeme1 :: PC m => P m a -> P m a
 lexeme1 p = try (p <* spaces1)
 
--- | Same a lexeme but only succeed if either:
+-- | Same as 'lexeme' but only succeed if either:
+--
 --   * at least one trailing white space was consumed
 --   * the next character is of a special class, considered
---   "terminating" characters. Currently these are \\n ; ) | > \^ \< #
+-- /terminating/ characters. Currently these are \\n ; ) | > \^ \< #
 lexemeN :: PC m => P m a -> P m a
 lexemeN p = try (p <* (spaces1 <|> (void . lookAhead) sep))
   where
