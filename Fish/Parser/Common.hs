@@ -11,7 +11,6 @@ import qualified Data.Text as T
 import Data.Functor
 import Data.String (IsString(..))
 import Data.CharSet
-import Data.Default
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
@@ -50,9 +49,6 @@ makeLenses ''Context
 
 -- | The starting 'Context'.
 defaultContext = Context False False False
-
-instance Default Context where
-  def = defaultContext
 
 -- | Run a parser in a given 'Context'.
 runpInContext :: PC m => Context -> P m a -> m a
