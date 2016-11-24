@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import Data.Functor
 import Data.String (IsString(..))
 import Data.CharSet
+import Data.Default
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
@@ -19,7 +20,7 @@ import Control.Lens hiding (Context)
 -- | A Monad Transformer which gives access to the parser 'Context'.
 type P = ReaderT Context
 
--- | The parsing /Monad/. We use ConstraintKinds instead of
+-- | The parsing \"Monad\". We use /ConstraintKinds/ instead of
 --   a concrete Monad 
 --
 --   to keep the code polymorphic over the 
@@ -50,6 +51,17 @@ makeLenses ''Context
 -- | The starting 'Context'.
 defaultContext = Context False False False
 
+instance Default Context where
+  def = defaultContext
+
+-- | Run a parser in a given 'Context'.
+runpInContext :: PC m => Context -> P m a -> m a
+runpInContext ctxt p = (p <* eof) `runReaderT` ctxt
+
+-- | Run a parser in the 'defaultContext'.
+runp :: PC m => P m a -> m a
+runp p = (p <* eof) `runReaderT` defaultContext
+
 -- | Toggle a 'Context' switch ON.
 withContext l = local (l .~ True)
 
@@ -65,12 +77,12 @@ instance IsString CharSet where
   fromString = fromList
 
 -- | An alias, such that the underlying implementation
---   can be switched between "CharSet" and plain 'noneOf'.
+--   can be switched between 'CharSet' and plain 'noneOf'.
 noneOf' :: PC m => CharSet -> P m Char
 noneOf' = noneOfSet
 
 -- | An alias, such that the underlying implementation
---   can be switched between "CharSet" and plain 'oneOf'.
+--   can be switched between 'CharSet' and plain 'oneOf'.
 oneOf' :: PC m => CharSet -> P m Char
 oneOf' = oneOfSet
 
@@ -141,11 +153,8 @@ stmtSep = do
     sep = satisfy $ (||) <$> (== '\n') <*> (==';')
     seps1 = skipSome sep
 
--- | Skip over a number of statement seperators,
---
---   the meaning of which depends on the cmdSubst 'Context' switch.
--- 
---   Make sure at least one newline / semicolon was consumed.
+-- | Like 'stmtSep', but make sure at least one
+--   newline / semicolon was consumed.
 stmtSep1 :: PC m => P m ()
 stmtSep1 = do
   c <- view cmdSubst

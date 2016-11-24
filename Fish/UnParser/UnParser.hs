@@ -2,6 +2,8 @@
 module Fish.UnParser.UnParser where
 
 import Data.Monoid
+import Data.String (fromString)
+import qualified Data.List.NonEmpty as N
 import Control.Applicative
 import Fish.Lang.Lang
 import Fish.UnParser.Quote
@@ -16,10 +18,9 @@ mintCal s = \case
 class Unparse a where
   unparse :: a -> S
 
-
 instance Unparse (Prog t) where
   unparse (Prog _ sts) = 
-    mintCal "\n" (map unparse sts)
+    mconcat $ map (\s -> unparse s <> "\n") sts
 
 instance Unparse (Args t) where
   unparse (Args _ es) = 
@@ -34,10 +35,9 @@ instance Unparse (CompStmt t) where
       <> unparse cst
     Forked t st -> unparse st <> " &"
 
-unparsePipe :: OutFd -> S
-unparsePipe = \case
-  StdOutFd -> "|"
-  StdErrFd -> "2>|"
+unparsePipe :: Fd -> S
+unparsePipe fd =
+  unparseFdL True fd <> "|"
 
 instance Unparse (Stmt t) where
   unparse = \case
@@ -103,10 +103,10 @@ unparseForSt vari args prog =
   <> unparse args <> "\n"
   <> unparse prog <> "\n" <> "end"
 
-unparseIfSt :: [(Stmt t,Prog t)] -> Maybe (Prog t) -> S
+unparseIfSt :: N.NonEmpty (Stmt t,Prog t) -> Maybe (Prog t) -> S
 unparseIfSt clauses mfinal =
   mintCal ("\n" <> "else" <> " ")
-    (map unparseClause clauses)
+    (map unparseClause $ N.toList clauses)
   <> maybe "" unparseFinal mfinal
   <> "\n" <> "end"
   where
@@ -117,10 +117,10 @@ unparseIfSt clauses mfinal =
       "else" <> "\n"
       <> unparse prog
 
-unparseSwitchSt :: Expr t -> [(Expr t,Prog t)] -> S
+unparseSwitchSt :: Expr t -> N.NonEmpty (Expr t,Prog t) -> S
 unparseSwitchSt e cases =
   "switch" <> " " <> unparse e <> "\n"
-  <> mintCal "\n" (map unparseCase cases)
+  <> mintCal "\n" (map unparseCase $ N.toList cases)
   <> "\n" <> "end"
   where
     unparseCase (e,prog) =
@@ -145,22 +145,25 @@ unparseNotSt :: Stmt t -> S
 unparseNotSt st =
   "not" <> " " <> unparse st
 
-unparseRedirectedSt :: Stmt t -> [Redirect t] -> S
+unparseRedirectedSt :: Stmt t -> N.NonEmpty (Redirect t) -> S
 unparseRedirectedSt st redirs =
   unparse st <> " "
-  <> mintCal " " (map unparse redirs)
+  <> mintCal " " (map unparse $ N.toList redirs)
 
 
 instance Unparse (Expr t) where
   unparse = \case
     StringE _ s -> quote s
     GlobE _ g -> unparse g
-    ProcE _ e -> unparse e
+    ProcE _ e -> "%" <> unparse e
     HomeDirE _ -> "~"
-    VarRefE _ q vref -> unparse vref
+    VarRefE _ q vref -> 
+      if q 
+        then "\"" <> unparse vref <> "\""
+        else unparse vref
     BracesE _ es -> "{" <> mintCal "," (map unparse es) <> "}"
     CmdSubstE _ cref -> unparse cref
-    ConcatE _ e1 e2 -> unparse e1 <> " " <> unparse e2
+    ConcatE _ e1 e2 -> unparse e1 <> unparse e2
 
 instance Unparse (CmdRef t) where
   unparse (CmdRef _ (Prog _ sts) ref) = 
@@ -174,12 +177,13 @@ instance Unparse (VarDef t) where
 
 instance Unparse (VarRef t) where
   unparse (VarRef _ name ref) = 
+    "$" <>
     either unparse unparse name
     <> unparseRef ref
 
 unparseRef :: Unparse i => Ref i -> S
-unparseRef = maybe ""
-  (bracket . mintCal " " . map unparse)
+unparseRef = bracket
+  . maybe "1..-1" (mintCal " " . map unparse)
   where
     bracket t = "[" <> t <> "]"
 
@@ -207,29 +211,34 @@ instance Unparse (Redirect t) where
   unparse = unparseRedirect
 
 unparseRedirect :: Redirect t -> S
-unparseRedirect (Redirect l r) = 
-  case l of
-    Left StdInFd -> "<"
-      <> case r of
-        Left fd -> " " <> unparseFd fd
-        Right (False,e) -> " " <> unparse e
-        Right (True,_) ->
-          error "Found invalid redirection."
-    Right StdOutFd -> ">"
-      <> case r of
-        Left fd -> " " <> unparseFd fd
-        Right (app,e) ->
-          (if app then ">" else "")
-          <> " " <> unparse e
-    Right StdErrFd -> "^" 
-      <> case r of
-        Left fd -> " " <> unparseFd fd
-        Right (app,e) ->
-          (if app then "^" else "")
-          <> " " <> unparse e
-  where
-    unparseFd = \case
-      Left StdInFd -> "&0"
-      Right StdOutFd -> "&1"
-      Right StdErrFd -> "&2"
+unparseRedirect = \case
+  RedirectClose fd ->
+    unparseFdL True fd <> "&-"
+  RedirectIn fdl r ->
+    unparseFdL False fdl
+    <> case r of
+      Left fdr -> unparseFdR fdr
+      Right e -> " " <> unparse e
+  RedirectOut fdl r ->
+    unparseFdL True fdl
+    <> case r of
+      Left fdr -> unparseFdR fdr
+      Right (mode,e) -> (<> " " <> unparse e)
+        $ case mode of
+          FModeWrite -> ""
+          FModeApp -> ">"
+          FModeNoClob -> "?"
+
+unparseFdL :: Bool -> Fd -> S
+unparseFdL out fd =
+  (fromString . show)
+    (fromEnum fd)
+  <> if out then ">" else "<"
+
+unparseFdR :: Fd -> S
+unparseFdR fd =
+  "&" <>
+  (fromString . show)
+    (fromEnum fd)
+
 

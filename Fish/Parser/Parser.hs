@@ -1,10 +1,10 @@
 {-# language LambdaCase, TupleSections, OverloadedStrings #-}
 module Fish.Parser.Parser where
 
+import qualified Fish.Parser.Redirect as Redirect
 import Fish.Parser.Common
 import Fish.Parser.Gen
 import Fish.Parser.Glob
-import Fish.Parser.Fd
 import Fish.Lang.Lang
 
 import Text.Parser.Combinators
@@ -15,13 +15,14 @@ import Data.Bool
 import Data.Monoid
 import qualified Data.Char as C
 import qualified Data.Text as T
+import qualified Data.List.NonEmpty as N
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
 import Control.Lens hiding (Context,noneOf)
 
 program :: PC m => m (Prog ())
-program = (prog <* eof) `runReaderT` defaultContext
+program = runp prog
 
 prog :: PC m => P m (Prog ())
 prog = stmtSep *>
@@ -48,9 +49,9 @@ compStmt = do
       ( piped st <|> forked st ) )
   where
     piped st = Piped ()
-      <$> ( sym "|" $> StdOutFd
-            <|> sym "1>|" $> StdOutFd 
-            <|> sym "2>|" $> StdErrFd )
+      <$> ( sym "|" $> Fd1
+            <|> sym "1>|" $> Fd1
+            <|> sym "2>|" $> Fd2 )
       <*> return st
       <*> compStmt
       <?> "pipe"
@@ -63,10 +64,14 @@ compStmt = do
 stmt :: PC m => P m (Stmt ())
 stmt = do
   st <- plain
-  option st $ try (RedirectedSt () st <$> redirections)
+  option st $ try (RedirectedSt () st <$> redirects)
   <?> "statement"
   where
-    redirections = some redirect <?> "redirection"
+    redirects = 
+      N.fromList
+      <$> some redirect
+      <?> "redirections"
+    
     plain = choice [
         commentSt
         ,setSt
@@ -126,8 +131,8 @@ forSt = sym1 "for" *>
 
 ifSt :: PC m => P m (Stmt ())
 ifSt =
-  ( IfSt ()
-    <$> ((:) <$> ifblock <*> many elif)
+  ( IfSt () . N.fromList
+    <$> ( (:) <$> ifblock <*> many elif )
     <*> optional el ) <* symN "end"
   <?> "if-statement"
   where
@@ -141,7 +146,9 @@ ifSt =
 switchSt :: PC m => P m (Stmt ())
 switchSt = sym1 "switch" *>
   ( SwitchSt ()
-    <$> lexemeN expr <*> (stmtSep1 *> many switchCase) )
+    <$> lexemeN expr
+    <*> ( stmtSep1 *>
+          ( N.fromList <$> some switchCase ) ) )
   <* symN "end"
   <?> "switch-statement"
   where
@@ -188,7 +195,9 @@ expr = do
             ,homeDirE
             ,procE ] )
 
-    intE = (StringE () . pack) <$> some digit <?> "integer"
+    intE = (StringE () . pack)
+      <$> some (digit <|> char '-' <|> char '+')
+      <?> "integer"
 
 varRefE :: PC m => P m (Expr ())
 varRefE = VarRefE ()
@@ -217,48 +226,14 @@ globE = GlobE ()
 
 procE :: PC m => P m (Expr ())
 procE = ProcE ()
-  <$> (char '%' *> lexemeN expr)
+  <$> (char '%' *> expr)
   <?> "process-expansion"
 
 homeDirE :: PC m => P m (Expr ())
 homeDirE = char '~' $> HomeDirE () <?> "~"
 
 redirect :: PC m => P m (Redirect ())
-redirect =
-  choice [ to, from, err ] <?> "redirection"
-  where
-    outRedirect start app = start *>
-      parseEither (char '&' *> fd)
-      ( (,)
-        <$> option False (app $> True)
-        <*> (spaces *> lexemeN expr) )
-    
-    startErr = 
-      ( string "2>"
-        <* notFollowedBy (char '|') )
-    
-    err = Redirect (Right StdErrFd)
-      <$> ( outRedirect (char '^') (char '^')
-            <|> outRedirect startErr (char '>') )
-      <?> "stderr-redirection"
-    
-    startTo = try
-      ( skipOptional (char '1')
-        *> char '>'
-        <* notFollowedBy (char '|') )
-    
-    to = Redirect (Right StdOutFd)
-      <$> outRedirect startTo (char '>')
-      <?> "stdout-redirection"
-    
-    startFrom = try
-      ( skipOptional (char '0')
-        *> char '<' )
-    
-    from = startFrom *>
-      ( Redirect (Left StdInFd) . Right . (False,)
-        <$> ( spaces *> lexemeN expr) )
-      <?> "stdin-redirection"
+redirect = Redirect.redirect (lexemeN expr)
 
 ref :: PC m => P m i -> P m (Ref i)
 ref q = withContext array $

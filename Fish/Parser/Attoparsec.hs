@@ -6,3 +6,4 @@ import Data.Attoparsec.Text
 
 program :: Parser (Prog ())
 program = P.program
+
