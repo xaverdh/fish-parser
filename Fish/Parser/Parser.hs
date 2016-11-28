@@ -379,5 +379,5 @@ cmdIdent = (CmdIdent () . pack)
         ( some $ alphaNum <|> oneOf "/_-" )
   <?> "command-identifier"
   where
-    noTermString = mfilter $ not . (`elem` ["end","else"])
+    noTermString = mfilter $ not . (`elem` ["end","else","case"])
 
