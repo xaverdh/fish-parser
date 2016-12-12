@@ -75,11 +75,11 @@ unparseCmdSt cmdi args =
   unparse cmdi <> " "
   <> unparse args
 
-unparseSetSt :: Maybe (VarDef t,Args t) -> S
+unparseSetSt :: Maybe (Args t,VarDef t,Args t) -> S
 unparseSetSt = \case
   Nothing -> "set"
-  Just (vdef,args) ->
-    "set" <> " "
+  Just (pres,vdef,args) ->
+    "set" <> " " <> unparse pres <> " "
     <> unparse vdef <> " " <> unparse args
 
 unparseFunctionSt :: FunIdent t -> Args t -> Prog t -> S
