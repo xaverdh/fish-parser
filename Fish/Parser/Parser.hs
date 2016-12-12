@@ -101,9 +101,17 @@ cmdSt = CmdSt ()
 setSt :: PC m => P m (Stmt ())
 setSt = symN "set" *>
   ( SetSt ()
-    <$> optional
-    ( (,) <$> lexemeN varDef <*> args ) )
+    <$> optional body )
   <?> "variable-definition"
+  where
+    body = post <|> pre
+    
+    pre = do
+      e <- expr <* spaces1
+      (Args _ pres,vdef,args) <- body
+      return (Args () $ e:pres,vdef,args)
+
+    post = (Args () [],,) <$> try ( lexemeN varDef ) <*> args
 
 funSt :: PC m => P m (Stmt ())
 funSt = sym1 "function" *> (

@@ -31,7 +31,7 @@ data Stmt t =
   -- ^ A /comment/
   | CmdSt t (CmdIdent t) (Args t)
   -- ^ A /shell command/, has an identifier and arguments
-  | SetSt t (Maybe ((VarDef t),(Args t)))
+  | SetSt t (Maybe ((Args t),(VarDef t),(Args t)))
   -- ^ The /set/ builtin command
   | FunctionSt t (FunIdent t) (Args t) (Prog t)
   -- ^ The /function/ builtin command
