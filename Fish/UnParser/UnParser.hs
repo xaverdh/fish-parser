@@ -84,6 +84,9 @@ unparseCmdSt cmdi args =
   unparseSp cmdi
   <> unparse args
 
+instance Unparse t => Unparse (SetCommand t) where
+  unparse = unparseSetSt
+
 unparseSetSt :: SetCommand t -> S
 unparseSetSt = (("set" <> " ") <>) . \case
   SetSetting mscope mexport vdef args ->
