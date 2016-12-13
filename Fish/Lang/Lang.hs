@@ -70,7 +70,7 @@ data Expr t =
   | BracesE t [Expr t]
   -- ^ Braces expansion, i.e. {..}.
   | CmdSubstE t (CmdRef t)
-  -- ^ Braces expansion, i.e. (..).
+  -- ^ Command substitution, i.e. (..).
   | ConcatE t (Expr t) (Expr t)
   -- ^ One expression following the other without seperating whitespace.
   deriving (Eq,Ord,Show,Functor)
@@ -83,7 +83,7 @@ data SetCommand t =
   --   boolean corresponds to the "-n" flag.
   | SetQuery (Maybe Scope) (Maybe Export) (Args t)
   -- ^ The /set/ builtin command in query mode
-  | SetErase (Maybe Scope) (Maybe Export) (N.NonEmpty (VarIdent t))
+  | SetErase (Maybe Scope) (Maybe Export) (Args t)
   -- ^ The /set/ builtin command in erase mode
   deriving (Eq,Ord,Show,Functor)
 

@@ -125,8 +125,8 @@ setCommand = try setSQE <|> setList
           <$> lexemeN varDef
           <*> args
         Erase ->
-          SetErase mscp fexport . N.fromList
-          <$> (some $ lexemeN varIdent)
+          SetErase mscp fexport
+          <$> args
         Query ->
           SetQuery mscp fexport
           <$> args
