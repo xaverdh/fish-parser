@@ -125,11 +125,9 @@ setCommand = try setSQE <|> setList
           <$> lexemeN varDef
           <*> args
         Erase ->
-          SetErase mscp fexport
-          <$> args
+          SetErase mscp <$> args
         Query ->
-          SetQuery mscp fexport
-          <$> args
+          SetQuery mscp fexport <$> args
 
     scope = choice
       [ flag ScopeLocal "l" "local"

@@ -102,10 +102,9 @@ unparseSetSt = (("set" <> " ") <>) . \case
     <> unparseMScope mscope
     <> unparseMExport mexport
     <> unparse args
-  SetErase mscope mexport args ->
+  SetErase mscope args ->
     "-e" <> " "
     <> unparseMScope mscope
-    <> unparseMExport mexport
     <> unparse args
   where
     unparseMScope = maybe "" unparseSp

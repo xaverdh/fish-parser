@@ -71,7 +71,7 @@ instance Arbitrary t => Arbitrary (SetCommand t) where
     [ SetSetting <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
       ,SetList <$> arbitrary <*> arbitrary
       ,SetQuery <$> arbitrary <*> arbitrary <*> arbitrary
-      ,SetErase <$> arbitrary <*> arbitrary <*> arbitrary ]
+      ,SetErase <$> arbitrary <*> arbitrary ]
 
 instance Arbitrary Scope where
   arbitrary = arbitraryBoundedEnum
