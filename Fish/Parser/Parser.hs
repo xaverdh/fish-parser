@@ -7,6 +7,7 @@ import Fish.Parser.Gen
 import Fish.Parser.Glob
 import Fish.Lang.Lang
 
+import Text.Parser.Permutation
 import Text.Parser.Combinators
 import Text.Parser.LookAhead
 import Text.Parser.Char hiding (space,spaces)
@@ -100,18 +101,52 @@ cmdSt = CmdSt ()
 
 setSt :: PC m => P m (Stmt ())
 setSt = symN "set" *>
-  ( SetSt ()
-    <$> optional body )
-  <?> "variable-definition"
-  where
-    body = post <|> pre
-    
-    pre = do
-      e <- expr <* spaces1
-      (Args _ pres,vdef,args) <- body
-      return (Args () $ e:pres,vdef,args)
+  ( SetSt () <$> setCommand )
+  <?> "set-statement"
 
-    post = (Args () [],,) <$> try ( lexemeN varDef ) <*> args
+data SetMode = Erase | Query | Setting
+
+setCommand :: PC m => P m (SetCommand ())
+setCommand = try setSQE <|> setList
+  where
+    setList = SetList
+      <$> option Nothing (Just <$> scope)
+      <*> option False (flag True "n" "names")
+
+    setSQE = do
+      (fmode,mscp,fexport) <- permute
+        ( (,,)
+          <$?> (Setting,mode)
+          <|?> (Nothing,Just <$> scope)
+          <|?> (Nothing,Just <$> export) )
+      case fmode of
+        Setting ->
+          SetSetting mscp fexport
+          <$> lexemeN varDef
+          <*> args
+        Erase ->
+          SetErase mscp fexport . N.fromList
+          <$> (some $ lexemeN varIdent)
+        Query ->
+          SetQuery mscp fexport
+          <$> args
+
+    scope = choice
+      [ flag ScopeLocal "l" "local"
+       ,flag ScopeGlobal "g" "global"
+       ,flag ScopeUniversal "U" "universal" ]
+
+    export = choice
+      [ flag Export "x" "export"
+       ,flag UnExport "u" "unexport" ]
+
+    mode = choice
+      [ flag Erase "e" "erase"
+       ,flag Query "q" "query" ]
+
+    flag value short long =
+      ( symN ("-" <> short)
+        <|> symN ("--" <> long) ) $> value
 
 funSt :: PC m => P m (Stmt ())
 funSt = sym1 "function" *> (

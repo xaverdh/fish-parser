@@ -31,7 +31,7 @@ data Stmt t =
   -- ^ A /comment/
   | CmdSt t (CmdIdent t) (Args t)
   -- ^ A /shell command/, has an identifier and arguments
-  | SetSt t (Maybe ((Args t),(VarDef t),(Args t)))
+  | SetSt t (SetCommand t)
   -- ^ The /set/ builtin command
   | FunctionSt t (FunIdent t) (Args t) (Prog t)
   -- ^ The /function/ builtin command
@@ -74,6 +74,29 @@ data Expr t =
   | ConcatE t (Expr t) (Expr t)
   -- ^ One expression following the other without seperating whitespace.
   deriving (Eq,Ord,Show,Functor)
+
+data SetCommand t = 
+  SetSetting (Maybe Scope) (Maybe Export) (VarDef t) (Args t)
+  -- ^ The /set/ builtin command in setting mode
+  | SetList (Maybe Scope) Bool
+  -- ^ The /set/ builtin command in list mode,
+  --   boolean corresponds to the "-n" flag.
+  | SetQuery (Maybe Scope) (Maybe Export) (Args t)
+  -- ^ The /set/ builtin command in query mode
+  | SetErase (Maybe Scope) (Maybe Export) (N.NonEmpty (VarIdent t))
+  -- ^ The /set/ builtin command in erase mode
+  deriving (Eq,Ord,Show,Functor)
+
+-- | Export flag.
+data Export = Export | UnExport
+  deriving (Eq,Ord,Show,Bounded,Enum)
+
+-- | A variable scope.
+data Scope = 
+  ScopeLocal
+  | ScopeGlobal
+  | ScopeUniversal
+  deriving (Eq,Ord,Show,Bounded,Enum)
 
 -- | Glob pattern, can be one of * ** ?
 data Glob = 

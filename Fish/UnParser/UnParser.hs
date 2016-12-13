@@ -10,27 +10,36 @@ import Fish.UnParser.Quote
 
 quote = quoteSQ
 
-mintCal :: Monoid m => m -> [m] -> m
-mintCal s = \case
+mintcal :: Monoid m => m -> [m] -> m
+mintcal s = \case
   [] -> mempty
   xs -> foldr1 (\x y -> x <> s <> y) xs
 
+unLines = mintcal "\n"
+unWords = mintcal " "
+
 class Unparse a where
   unparse :: a -> S
+  
+  unparseLn :: a -> S
+  unparseLn a = unparse a <> "\n"
+  
+  unparseSp :: a -> S
+  unparseSp a = unparse a <> " "
 
 instance Unparse (Prog t) where
   unparse (Prog _ sts) = 
-    mconcat $ map (\s -> unparse s <> "\n") sts
+    mconcat $ map unparseLn sts
 
 instance Unparse (Args t) where
   unparse (Args _ es) = 
-    mintCal " " (map unparse es)
+    unWords (map unparse es)
 
 instance Unparse (CompStmt t) where
   unparse = \case
     Simple _ st -> unparse st
     Piped _ pfd st cst ->
-      unparse st <> " "
+      unparseSp st
       <> unparsePipe pfd <> " "
       <> unparse cst
     Forked t st -> unparse st <> " &"
@@ -45,7 +54,7 @@ instance Unparse (Stmt t) where
       unparseCommentSt s
     CmdSt _ cmdi args ->
       unparseCmdSt cmdi args
-    SetSt _ mdef -> unparseSetSt mdef
+    SetSt _ setcmd -> unparseSetSt setcmd
     FunctionSt _ funi args prog ->
       unparseFunctionSt funi args prog
     WhileSt _ st prog ->
@@ -72,46 +81,77 @@ unparseCommentSt = ("#" <>)
 
 unparseCmdSt :: CmdIdent t -> Args t -> S
 unparseCmdSt cmdi args =
-  unparse cmdi <> " "
+  unparseSp cmdi
   <> unparse args
 
-unparseSetSt :: Maybe (Args t,VarDef t,Args t) -> S
-unparseSetSt = \case
-  Nothing -> "set"
-  Just (pres,vdef,args) ->
-    "set" <> " " <> unparse pres <> " "
-    <> unparse vdef <> " " <> unparse args
+unparseSetSt :: SetCommand t -> S
+unparseSetSt = (("set" <> " ") <>) . \case
+  SetSetting mscope mexport vdef args ->
+    unparseMScope mscope
+    <> unparseMExport mexport
+    <> unparseSp vdef
+    <> unparse args
+  SetList mscope namesOnly ->
+    (if namesOnly then "-n" <> " " else "")
+    <> unparseMScope mscope
+  SetQuery mscope mexport args ->
+    "-q" <> " "
+    <> unparseMScope mscope
+    <> unparseMExport mexport
+    <> unparse args
+  SetErase mscope mexport idents ->
+    "-e" <> " "
+    <> unparseMScope mscope
+    <> unparseMExport mexport
+    <> (unWords . map unparse . N.toList) idents
+  where
+    unparseMScope = maybe "" unparseSp
+    unparseMExport = maybe "" unparseSp
+
+instance Unparse Scope where
+  unparse = \case
+    ScopeLocal -> "-l"
+    ScopeGlobal -> "-g"
+    ScopeUniversal -> "-U"
+
+instance Unparse Export where
+  unparse = \case
+    Export -> "-x"
+    UnExport -> "-u"
 
 unparseFunctionSt :: FunIdent t -> Args t -> Prog t -> S
 unparseFunctionSt funi args prog =
   "function" <> " "
-  <> unparse funi <> " "
-  <> unparse args <> "\n"
-  <> unparse prog <> "\n" <> "end"
+  <> unparseSp funi
+  <> unparseLn args
+  <> unparseLn prog
+  <> "end"
 
 unparseWhileSt :: Stmt t -> Prog t -> S
 unparseWhileSt st prog =
   "while" <> " "
-  <> unparse st <> "\n"
-  <> unparse prog <> "\n" <> "end"
+  <> unparseLn st
+  <> unparseLn prog
+  <> "end"
 
 unparseForSt :: VarIdent t -> Args t -> Prog t -> S
 unparseForSt vari args prog =
   "for" <> " "
-  <> unparse vari <> " "
+  <> unparseSp vari
   <> "in" <> " "
-  <> unparse args <> "\n"
-  <> unparse prog <> "\n" <> "end"
+  <> unparseLn args
+  <> unparseLn prog
+  <> "end"
 
 unparseIfSt :: N.NonEmpty (Stmt t,Prog t) -> Maybe (Prog t) -> S
 unparseIfSt clauses mfinal =
-  mintCal ("\n" <> "else" <> " ")
+  mintcal ("\n" <> "else" <> " ")
     (map unparseClause $ N.toList clauses)
   <> maybe "" unparseFinal mfinal
   <> "\n" <> "end"
   where
     unparseClause (st,prog) =
-      "if" <> " " <> unparse st <> "\n"
+      "if" <> " " <> unparseLn st
       <> unparse prog
     unparseFinal prog =
       "else" <> "\n"
@@ -119,19 +159,19 @@ unparseIfSt clauses mfinal =
 
 unparseSwitchSt :: Expr t -> N.NonEmpty (Expr t,Prog t) -> S
 unparseSwitchSt e cases =
-  "switch" <> " " <> unparse e <> "\n"
-  <> mintCal "\n" (map unparseCase $ N.toList cases)
+  "switch" <> " " <> unparseLn e
+  <> unLines (map unparseCase $ N.toList cases)
   <> "\n" <> "end"
   where
     unparseCase (e,prog) =
-      "case" <> " " <> unparse e <> "\n"
-      <> unparse prog <> "\n"
+      "case" <> " " <> unparseLn e
+      <> unparseLn prog
 
 unparseBeginSt :: Prog t -> S
 unparseBeginSt prog = 
   "begin" <> " " <> "\n"
-  <> unparse prog
-  <> "\n" <> "end"
+  <> unparseLn prog
+  <> "end"
 
 unparseAndSt :: Stmt t -> S
 unparseAndSt st =
@@ -147,8 +187,8 @@ unparseNotSt st =
 
 unparseRedirectedSt :: Stmt t -> N.NonEmpty (Redirect t) -> S
 unparseRedirectedSt st redirs =
-  unparse st <> " "
-  <> mintCal " " (map unparse $ N.toList redirs)
+  unparseSp st
+  <> unWords (map unparse $ N.toList redirs)
 
 
 instance Unparse (Expr t) where
@@ -161,13 +201,13 @@ instance Unparse (Expr t) where
       if q 
         then "\"" <> unparse vref <> "\""
         else unparse vref
-    BracesE _ es -> "{" <> mintCal "," (map unparse es) <> "}"
+    BracesE _ es -> "{" <> mintcal "," (map unparse es) <> "}"
     CmdSubstE _ cref -> unparse cref
     ConcatE _ e1 e2 -> unparse e1 <> unparse e2
 
 instance Unparse (CmdRef t) where
   unparse (CmdRef _ (Prog _ sts) ref) = 
-    "(" <> mintCal " ; " (map unparse sts) <> ")"
+    "(" <> mintcal " ; " (map unparse sts) <> ")"
     <> unparseRef ref
 
 instance Unparse (VarDef t) where
@@ -183,7 +223,7 @@ instance Unparse (VarRef t) where
 
 unparseRef :: Unparse i => Ref i -> S
 unparseRef = bracket
-  . maybe "1..-1" (mintCal " " . map unparse)
+  . maybe "1..-1" (unWords . map unparse)
   where
     bracket t = "[" <> t <> "]"
 

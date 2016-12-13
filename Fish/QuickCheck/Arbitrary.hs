@@ -66,6 +66,19 @@ instance Arbitrary t => Arbitrary (Expr t) where
       ,CmdSubstE <$> arbitrary <*> arbitrary
       ,ConcatE <$> arbitrary <*> exprNoProcE <*> arbitrary ]
 
+instance Arbitrary t => Arbitrary (SetCommand t) where
+  arbitrary = oneof
+    [ SetSetting <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+      ,SetList <$> arbitrary <*> arbitrary
+      ,SetQuery <$> arbitrary <*> arbitrary <*> arbitrary
+      ,SetErase <$> arbitrary <*> arbitrary <*> arbitrary ]
+
+instance Arbitrary Scope where
+  arbitrary = arbitraryBoundedEnum
+
+instance Arbitrary Export where
+  arbitrary = arbitraryBoundedEnum
+
 exprNoProcE :: Arbitrary t => Gen (Expr t)
 exprNoProcE = 
   arbitrary `suchThat` \case
