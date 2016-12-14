@@ -28,7 +28,7 @@ flag ReadP
   Default:     False
 
 library
-  exposed-modules:     Fish.Lang.Lang, Fish.UnParser.Quote Fish.UnParser.UnParser Fish.Parser.Redirect, Fish.Parser.Common, Fish.Parser.Glob, Fish.Parser.Parser, Fish.Parser.Gen
+  exposed-modules:     Fish.UnParser.Quote Fish.UnParser.UnParser Fish.Parser.Redirect, Fish.Parser.Common, Fish.Parser.Glob, Fish.Parser.Parser, Fish.Parser.Gen
   -- other-modules:       
   -- other-extensions:    many ... todo: fill this in
   build-depends:       base >=4.9 && <4.10, mtl >=2.2.1 && <2.3, parsers >= 0.12.4 && < 0.13, text >= 1.2.2 && < 1.3, charset >= 0.3.7 && < 0.4, lens >= 4.15.1 && < 4.16, fish-lang  >= 0.1.0 && < 0.2
