@@ -2,7 +2,7 @@
 module Fish.QuickCheck.Arbitrary where
 
 import Test.QuickCheck hiding (Args)
-import Fish.Lang.Lang
+import Fish.Lang
 import qualified Data.Text as T
 import qualified Data.Char as C
 

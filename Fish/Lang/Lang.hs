@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
-module Fish.Lang.Lang where
+module Fish.Lang where
 
 import qualified Data.Text as T
 import qualified Data.List.NonEmpty as N

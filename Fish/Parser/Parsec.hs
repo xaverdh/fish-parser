@@ -2,7 +2,7 @@
 module Fish.Parser.Parsec where
 
 import qualified Fish.Parser.Parser as P
-import Fish.Lang.Lang
+import Fish.Lang
 import Text.Parsec
 import Data.Functor.Identity
 program :: Stream s Identity Char => Parsec s () (Prog ())

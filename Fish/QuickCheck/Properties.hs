@@ -1,7 +1,7 @@
 {-# language OverloadedStrings #-}
 module Fish.QuickCheck.Properties where
 
-import Fish.Lang.Lang
+import Fish.Lang
 
 import Fish.Parser.Parser
 import Fish.Parser.Common
