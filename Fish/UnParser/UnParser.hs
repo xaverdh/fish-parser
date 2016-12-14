@@ -19,12 +19,12 @@ unLines = mintcal "\n"
 unWords = mintcal " "
 
 class Unparse a where
-  unparse :: a -> S
+  unparse :: a -> Str
   
-  unparseLn :: a -> S
+  unparseLn :: a -> Str
   unparseLn a = unparse a <> "\n"
   
-  unparseSp :: a -> S
+  unparseSp :: a -> Str
   unparseSp a = unparse a <> " "
 
 instance Unparse (Prog t) where
@@ -44,7 +44,7 @@ instance Unparse (CompStmt t) where
       <> unparse cst
     Forked t st -> unparse st <> " &"
 
-unparsePipe :: Fd -> S
+unparsePipe :: Fd -> Str
 unparsePipe fd =
   unparseFdL True fd <> "|"
 
@@ -76,10 +76,10 @@ instance Unparse (Stmt t) where
     RedirectedSt _ st redirs ->
       unparseRedirectedSt st redirs
 
-unparseCommentSt :: S -> S
+unparseCommentSt :: Str -> Str
 unparseCommentSt = ("#" <>)
 
-unparseCmdSt :: CmdIdent t -> Args t -> S
+unparseCmdSt :: CmdIdent t -> Args t -> Str
 unparseCmdSt cmdi args =
   unparseSp cmdi
   <> unparse args
@@ -87,7 +87,7 @@ unparseCmdSt cmdi args =
 instance Unparse t => Unparse (SetCommand t) where
   unparse = unparseSetSt
 
-unparseSetSt :: SetCommand t -> S
+unparseSetSt :: SetCommand t -> Str
 unparseSetSt = (("set" <> " ") <>) . \case
   SetSetting mscope mexport vdef args ->
     unparseMScope mscope
@@ -122,7 +122,7 @@ instance Unparse Export where
     Export -> "-x"
     UnExport -> "-u"
 
-unparseFunctionSt :: FunIdent t -> Args t -> Prog t -> S
+unparseFunctionSt :: FunIdent t -> Args t -> Prog t -> Str
 unparseFunctionSt funi args prog =
   "function" <> " "
   <> unparseSp funi
@@ -130,14 +130,14 @@ unparseFunctionSt funi args prog =
   <> unparseLn prog
   <> "end"
 
-unparseWhileSt :: Stmt t -> Prog t -> S
+unparseWhileSt :: Stmt t -> Prog t -> Str
 unparseWhileSt st prog =
   "while" <> " "
   <> unparseLn st
   <> unparseLn prog
   <> "end"
 
-unparseForSt :: VarIdent t -> Args t -> Prog t -> S
+unparseForSt :: VarIdent t -> Args t -> Prog t -> Str
 unparseForSt vari args prog =
   "for" <> " "
   <> unparseSp vari
@@ -146,7 +146,7 @@ unparseForSt vari args prog =
   <> unparseLn prog
   <> "end"
 
-unparseIfSt :: N.NonEmpty (Stmt t,Prog t) -> Maybe (Prog t) -> S
+unparseIfSt :: N.NonEmpty (Stmt t,Prog t) -> Maybe (Prog t) -> Str
 unparseIfSt clauses mfinal =
   mintcal ("\n" <> "else" <> " ")
     (map unparseClause $ N.toList clauses)
@@ -160,7 +160,7 @@ unparseIfSt clauses mfinal =
       "else" <> "\n"
       <> unparse prog
 
-unparseSwitchSt :: Expr t -> N.NonEmpty (Expr t,Prog t) -> S
+unparseSwitchSt :: Expr t -> N.NonEmpty (Expr t,Prog t) -> Str
 unparseSwitchSt e cases =
   "switch" <> " " <> unparseLn e
   <> unLines (map unparseCase $ N.toList cases)
@@ -170,25 +170,25 @@ unparseSwitchSt e cases =
       "case" <> " " <> unparseLn e
       <> unparseLn prog
 
-unparseBeginSt :: Prog t -> S
+unparseBeginSt :: Prog t -> Str
 unparseBeginSt prog = 
   "begin" <> " " <> "\n"
   <> unparseLn prog
   <> "end"
 
-unparseAndSt :: Stmt t -> S
+unparseAndSt :: Stmt t -> Str
 unparseAndSt st =
   "and" <> " " <> unparse st
 
-unparseOrSt :: Stmt t -> S
+unparseOrSt :: Stmt t -> Str
 unparseOrSt st =
   "or" <> " " <> unparse st
 
-unparseNotSt :: Stmt t -> S
+unparseNotSt :: Stmt t -> Str
 unparseNotSt st =
   "not" <> " " <> unparse st
 
-unparseRedirectedSt :: Stmt t -> N.NonEmpty (Redirect t) -> S
+unparseRedirectedSt :: Stmt t -> N.NonEmpty (Redirect t) -> Str
 unparseRedirectedSt st redirs =
   unparseSp st
   <> unWords (map unparse $ N.toList redirs)
@@ -224,7 +224,7 @@ instance Unparse (VarRef t) where
     either unparse unparse name
     <> unparseRef ref
 
-unparseRef :: Unparse i => Ref i -> S
+unparseRef :: Unparse i => Ref i -> Str
 unparseRef = bracket
   . maybe "1..-1" (unWords . map unparse)
   where
@@ -253,7 +253,7 @@ instance Unparse (CmdIdent t) where
 instance Unparse (Redirect t) where
   unparse = unparseRedirect
 
-unparseRedirect :: Redirect t -> S
+unparseRedirect :: Redirect t -> Str
 unparseRedirect = \case
   RedirectClose fd ->
     unparseFdL True fd <> "&-"
@@ -272,13 +272,13 @@ unparseRedirect = \case
           FModeApp -> ">"
           FModeNoClob -> "?"
 
-unparseFdL :: Bool -> Fd -> S
+unparseFdL :: Bool -> Fd -> Str
 unparseFdL out fd =
   (fromString . show)
     (fromEnum fd)
   <> if out then ">" else "<"
 
-unparseFdR :: Fd -> S
+unparseFdR :: Fd -> Str
 unparseFdR fd =
   "&" <>
   (fromString . show)
