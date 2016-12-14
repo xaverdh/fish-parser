@@ -94,8 +94,9 @@ unparseSetSt = (("set" <> " ") <>) . \case
     <> unparseMExport mexport
     <> unparseSp vdef
     <> unparse args
-  SetList mscope namesOnly ->
-    (if namesOnly then "-n" <> " " else "")
+  SetList mscope mexport namesOnly ->
+    if namesOnly then "-n" <> " " else ""
+    <> unparseMExport mexport
     <> unparseMScope mscope
   SetQuery mscope mexport args ->
     "-q" <> " "

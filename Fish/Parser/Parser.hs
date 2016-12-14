@@ -109,10 +109,11 @@ data SetMode = Erase | Query | Setting
 setCommand :: PC m => P m (SetCommand ())
 setCommand = try setSQE <|> setList
   where
-    setList = SetList
-      <$> option Nothing (Just <$> scope)
-      <*> option False (flag True "n" "names")
-
+    setList = permute ( SetList
+      <$?> (Nothing,Just <$> scope)
+      <|?> (Nothing,Just <$> export)
+      <|?> (False,flag True "n" "names") )
+    
     setSQE = do
       (fmode,mscp,fexport) <- permute
         ( (,,)

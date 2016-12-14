@@ -78,7 +78,7 @@ data Expr t =
 data SetCommand t = 
   SetSetting (Maybe Scope) (Maybe Export) (VarDef t) (Args t)
   -- ^ The /set/ builtin command in setting mode
-  | SetList (Maybe Scope) Bool
+  | SetList (Maybe Scope) (Maybe Export) Bool
   -- ^ The /set/ builtin command in list mode,
   --   boolean corresponds to the "-n" flag.
   | SetQuery (Maybe Scope) (Maybe Export) (Args t)

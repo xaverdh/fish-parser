@@ -69,7 +69,7 @@ instance Arbitrary t => Arbitrary (Expr t) where
 instance Arbitrary t => Arbitrary (SetCommand t) where
   arbitrary = oneof
     [ SetSetting <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-      ,SetList <$> arbitrary <*> arbitrary
+      ,SetList <$> arbitrary <*> arbitrary <*> arbitrary
       ,SetQuery <$> arbitrary <*> arbitrary <*> arbitrary
       ,SetErase <$> arbitrary <*> arbitrary ]
 
