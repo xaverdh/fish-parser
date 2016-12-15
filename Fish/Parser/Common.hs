@@ -115,7 +115,7 @@ lexeme1 p = try (p <* spaces1)
 --   considered /terminating/ characters.
 --
 --   Currently these are \\n ;  ) | > \^ \< #
-terminated :: P m => m ()
+terminated :: PC m => P m ()
 terminated = void . lookAhead $ oneOf' "\n;)|>^<#"
 
 -- | Same as 'lexeme' but only succeed if either:
