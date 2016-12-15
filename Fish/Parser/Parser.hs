@@ -1,4 +1,4 @@
-{-# language LambdaCase, TupleSections, OverloadedStrings #-}
+{-# language LambdaCase, TupleSections, OverloadedStrings, FlexibleContexts #-}
 module Fish.Parser.Parser where
 
 import qualified Fish.Parser.Redirect as Redirect
@@ -144,15 +144,17 @@ setCommand = try setSQE <|> setList
       [ flag Erase "e" "erase"
        ,flag Query "q" "query" ]
     
+    symN' s = lift $ symN s
+    
     flag value short long =
       get >>= \case
         True -> value <$
-          ( symN short <* put False
+          ( symN' short <* put False
             <|> (void . string) short )
         False -> value <$
-          ( symN ("-" <> short)
+          ( symN' ("-" <> short)
             <|> (try . void . string) ("-" <> short) <* put True
-            <|> symN ("--" <> long) )
+            <|> symN' ("--" <> long) )
 
 funSt :: PC m => P m (Stmt ())
 funSt = sym1 "function" *> (
