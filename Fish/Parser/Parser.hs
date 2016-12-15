@@ -19,7 +19,7 @@ import qualified Data.Text as T
 import qualified Data.List.NonEmpty as N
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Reader
+import Control.Monad.State
 import Control.Lens hiding (Context,noneOf)
 
 program :: PC m => m (Prog ())
@@ -113,13 +113,14 @@ setCommand = try setSQE <|> setList
       <$?> (Nothing,Just <$> scope)
       <|?> (Nothing,Just <$> export)
       <|?> (False,flag True "n" "names") )
-    
+      `evalStateT` False
     setSQE = do
       (fmode,mscp,fexport) <- permute
         ( (,,)
           <$?> (Setting,mode)
           <|?> (Nothing,Just <$> scope)
           <|?> (Nothing,Just <$> export) )
+        `evalStateT` False
       case fmode of
         Setting ->
           SetSetting mscp fexport
@@ -142,10 +143,16 @@ setCommand = try setSQE <|> setList
     mode = choice
       [ flag Erase "e" "erase"
        ,flag Query "q" "query" ]
-
+    
     flag value short long =
-      ( symN ("-" <> short)
-        <|> symN ("--" <> long) ) $> value
+      get >>= \case
+        True -> value <$
+          ( symN short <* put False
+            <|> (void . string) short )
+        False -> value <$
+          ( symN ("-" <> short)
+            <|> (try . void . string) ("-" <> short) <* put True
+            <|> symN ("--" <> long) )
 
 funSt :: PC m => P m (Stmt ())
 funSt = sym1 "function" *> (
