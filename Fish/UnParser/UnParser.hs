@@ -103,10 +103,10 @@ unparseSetSt = (("set" <> " ") <>) . \case
     <> unparseMScope mscope
     <> unparseMExport mexport
     <> unparse args
-  SetErase mscope args ->
+  SetErase mscope vdefs ->
     "-e" <> " "
     <> unparseMScope mscope
-    <> unparse args
+    <> unWords (map unparse $ N.toList vdefs)
   where
     unparseMScope = maybe "" unparseSp
     unparseMExport = maybe "" unparseSp
