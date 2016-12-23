@@ -1,8 +1,9 @@
-{-# language LambdaCase, OverloadedStrings #-}
+{-# language LambdaCase, OverloadedStrings, FlexibleInstances #-}
 module Fish.UnParser.UnParser where
 
 import Data.Monoid
 import Data.String (fromString)
+import qualified Data.Text as T
 import qualified Data.List.NonEmpty as N
 import Control.Applicative
 import Fish.Lang
@@ -19,23 +20,23 @@ unLines = mintcal "\n"
 unWords = mintcal " "
 
 class Unparse a where
-  unparse :: a -> Str
+  unparse :: a -> T.Text
   
-  unparseLn :: a -> Str
+  unparseLn :: a -> T.Text
   unparseLn a = unparse a <> "\n"
   
-  unparseSp :: a -> Str
+  unparseSp :: a -> T.Text
   unparseSp a = unparse a <> " "
 
-instance Unparse (Prog t) where
+instance Unparse (Prog T.Text t) where
   unparse (Prog _ sts) = 
     mconcat $ map unparseLn sts
 
-instance Unparse (Args t) where
+instance Unparse (Args T.Text t) where
   unparse (Args _ es) = 
     unWords (map unparse es)
 
-instance Unparse (CompStmt t) where
+instance Unparse (CompStmt T.Text t) where
   unparse = \case
     Simple _ st -> unparse st
     Piped _ pfd st cst ->
@@ -44,11 +45,11 @@ instance Unparse (CompStmt t) where
       <> unparse cst
     Forked t st -> unparse st <> " &"
 
-unparsePipe :: Fd -> Str
+unparsePipe :: Fd -> T.Text
 unparsePipe fd =
   unparseFdL True fd <> "|"
 
-instance Unparse (Stmt t) where
+instance Unparse (Stmt T.Text t) where
   unparse = \case
     CommentSt _ s ->
       unparseCommentSt s
@@ -76,18 +77,18 @@ instance Unparse (Stmt t) where
     RedirectedSt _ st redirs ->
       unparseRedirectedSt st redirs
 
-unparseCommentSt :: Str -> Str
+unparseCommentSt :: T.Text -> T.Text
 unparseCommentSt = ("#" <>)
 
-unparseCmdSt :: CmdIdent t -> Args t -> Str
+unparseCmdSt :: CmdIdent T.Text t -> Args T.Text t -> T.Text
 unparseCmdSt cmdi args =
   unparseSp cmdi
   <> unparse args
 
-instance Unparse t => Unparse (SetCommand t) where
+instance Unparse t => Unparse (SetCommand T.Text t) where
   unparse = unparseSetSt
 
-unparseSetSt :: SetCommand t -> Str
+unparseSetSt :: SetCommand T.Text t -> T.Text
 unparseSetSt = (("set" <> " ") <>) . \case
   SetSetting mscope mexport vdef args ->
     unparseMScope mscope
@@ -122,7 +123,7 @@ instance Unparse Export where
     Export -> "-x"
     UnExport -> "-u"
 
-unparseFunctionSt :: FunIdent t -> Args t -> Prog t -> Str
+unparseFunctionSt :: FunIdent T.Text t -> Args T.Text t -> Prog T.Text t -> T.Text
 unparseFunctionSt funi args prog =
   "function" <> " "
   <> unparseSp funi
@@ -130,14 +131,14 @@ unparseFunctionSt funi args prog =
   <> unparseLn prog
   <> "end"
 
-unparseWhileSt :: Stmt t -> Prog t -> Str
+unparseWhileSt :: Stmt T.Text t -> Prog T.Text t -> T.Text
 unparseWhileSt st prog =
   "while" <> " "
   <> unparseLn st
   <> unparseLn prog
   <> "end"
 
-unparseForSt :: VarIdent t -> Args t -> Prog t -> Str
+unparseForSt :: VarIdent T.Text t -> Args T.Text t -> Prog T.Text t -> T.Text
 unparseForSt vari args prog =
   "for" <> " "
   <> unparseSp vari
@@ -146,7 +147,7 @@ unparseForSt vari args prog =
   <> unparseLn prog
   <> "end"
 
-unparseIfSt :: N.NonEmpty (Stmt t,Prog t) -> Maybe (Prog t) -> Str
+unparseIfSt :: N.NonEmpty (Stmt T.Text t,Prog T.Text t) -> Maybe (Prog T.Text t) -> T.Text
 unparseIfSt clauses mfinal =
   mintcal ("\n" <> "else" <> " ")
     (map unparseClause $ N.toList clauses)
@@ -160,7 +161,7 @@ unparseIfSt clauses mfinal =
       "else" <> "\n"
       <> unparse prog
 
-unparseSwitchSt :: Expr t -> N.NonEmpty (Expr t,Prog t) -> Str
+unparseSwitchSt :: Expr T.Text t -> N.NonEmpty (Expr T.Text t,Prog T.Text t) -> T.Text
 unparseSwitchSt e cases =
   "switch" <> " " <> unparseLn e
   <> unLines (map unparseCase $ N.toList cases)
@@ -170,31 +171,31 @@ unparseSwitchSt e cases =
       "case" <> " " <> unparseLn e
       <> unparseLn prog
 
-unparseBeginSt :: Prog t -> Str
+unparseBeginSt :: Prog T.Text t -> T.Text
 unparseBeginSt prog = 
   "begin" <> " " <> "\n"
   <> unparseLn prog
   <> "end"
 
-unparseAndSt :: Stmt t -> Str
+unparseAndSt :: Stmt T.Text t -> T.Text
 unparseAndSt st =
   "and" <> " " <> unparse st
 
-unparseOrSt :: Stmt t -> Str
+unparseOrSt :: Stmt T.Text t -> T.Text
 unparseOrSt st =
   "or" <> " " <> unparse st
 
-unparseNotSt :: Stmt t -> Str
+unparseNotSt :: Stmt T.Text t -> T.Text
 unparseNotSt st =
   "not" <> " " <> unparse st
 
-unparseRedirectedSt :: Stmt t -> N.NonEmpty (Redirect t) -> Str
+unparseRedirectedSt :: Stmt T.Text t -> N.NonEmpty (Redirect T.Text t) -> T.Text
 unparseRedirectedSt st redirs =
   unparseSp st
   <> unWords (map unparse $ N.toList redirs)
 
 
-instance Unparse (Expr t) where
+instance Unparse (Expr T.Text t) where
   unparse = \case
     StringE _ s -> quote s
     GlobE _ g -> unparse g
@@ -208,23 +209,23 @@ instance Unparse (Expr t) where
     CmdSubstE _ cref -> unparse cref
     ConcatE _ e1 e2 -> unparse e1 <> unparse e2
 
-instance Unparse (CmdRef t) where
+instance Unparse (CmdRef T.Text t) where
   unparse (CmdRef _ (Prog _ sts) ref) = 
     "(" <> mintcal " ; " (map unparse sts) <> ")"
     <> unparseRef ref
 
-instance Unparse (VarDef t) where
+instance Unparse (VarDef T.Text t) where
   unparse (VarDef _ name ref) = 
     unparse name
     <> unparseRef ref
 
-instance Unparse (VarRef t) where
+instance Unparse (VarRef T.Text t) where
   unparse (VarRef _ name ref) = 
     "$" <>
     either unparse unparse name
     <> unparseRef ref
 
-unparseRef :: Unparse i => Ref i -> Str
+unparseRef :: Unparse i => Ref i -> T.Text
 unparseRef = bracket
   . maybe "1..-1" (unWords . map unparse)
   where
@@ -241,19 +242,19 @@ instance Unparse Glob where
     DiStarGl -> "**"
     QMarkGl -> "?"
 
-instance Unparse (VarIdent t) where
+instance Unparse (VarIdent T.Text t) where
   unparse (VarIdent _ s) = s
 
-instance Unparse (FunIdent t) where
+instance Unparse (FunIdent T.Text t) where
   unparse (FunIdent _ s) = s
 
-instance Unparse (CmdIdent t) where
+instance Unparse (CmdIdent T.Text t) where
   unparse (CmdIdent _ s) = s
 
-instance Unparse (Redirect t) where
+instance Unparse (Redirect T.Text t) where
   unparse = unparseRedirect
 
-unparseRedirect :: Redirect t -> Str
+unparseRedirect :: Redirect T.Text t -> T.Text
 unparseRedirect = \case
   RedirectClose fd ->
     unparseFdL True fd <> "&-"
@@ -272,13 +273,13 @@ unparseRedirect = \case
           FModeApp -> ">"
           FModeNoClob -> "?"
 
-unparseFdL :: Bool -> Fd -> Str
+unparseFdL :: Bool -> Fd -> T.Text
 unparseFdL out fd =
   (fromString . show)
     (fromEnum fd)
   <> if out then ">" else "<"
 
-unparseFdR :: Fd -> Str
+unparseFdR :: Fd -> T.Text
 unparseFdR fd =
   "&" <>
   (fromString . show)

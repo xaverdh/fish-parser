@@ -12,6 +12,7 @@ import Fish.UnParser.UnParser
 import Fish.QuickCheck.Arbitrary
 
 import Data.Monoid
+import qualified Data.Text as T
 import Data.Attoparsec.Text
 import Test.QuickCheck hiding (Args)
 
@@ -38,15 +39,15 @@ prop_parse_unparse_glob :: Glob -> Bool
 prop_parse_unparse_glob =
   parseUnparse glob
 
-prop_parse_unparse_varIdent :: VarIdent () -> Bool
+prop_parse_unparse_varIdent :: VarIdent T.Text () -> Bool
 prop_parse_unparse_varIdent = 
   parseUnparse varIdent
 
-prop_parse_unparse_funIdent :: FunIdent () -> Bool
+prop_parse_unparse_funIdent :: FunIdent T.Text () -> Bool
 prop_parse_unparse_funIdent = 
   parseUnparse funIdent
 
-prop_parse_unparse_cmdIdent :: CmdIdent () -> Bool
+prop_parse_unparse_cmdIdent :: CmdIdent T.Text () -> Bool
 prop_parse_unparse_cmdIdent =
   parseUnparse cmdIdent
 
