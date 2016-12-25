@@ -14,6 +14,7 @@ import Text.Parser.Char hiding (space,spaces)
 import Data.Functor
 import Data.Bool
 import Data.Monoid
+import Data.NText
 import qualified Data.Char as C
 import qualified Data.Text as T
 import qualified Data.List.NonEmpty as N
@@ -89,7 +90,7 @@ stmt = do
       ]
 
 commentSt :: PC m => P m (Stmt T.Text ())
-commentSt = (CommentSt () . pack)
+commentSt = (CommentSt () . T.pack)
   <$> (char '#' *> many (notChar '\n'))
   <?> "comment-statement"
 
@@ -415,17 +416,17 @@ strNQ = do
             else mzero
 
 varIdent :: PC m => P m (VarIdent T.Text ())
-varIdent = (VarIdent () . pack)
+varIdent = (VarIdent () . mkNText . T.pack)
   <$> ((:) <$> letter <*> many (alphaNum <|> char '_'))
   <?> "variable-identifier"
 
 funIdent :: PC m => P m (FunIdent T.Text ())
-funIdent = (FunIdent () . pack)
+funIdent = (FunIdent () . mkNText . T.pack)
   <$> some ( alphaNum <|> oneOf "_-" )
   <?> "function-identifier"
 
 cmdIdent :: PC m => P m (CmdIdent T.Text ())
-cmdIdent = (CmdIdent () . pack)
+cmdIdent = (CmdIdent () . mkNText . T.pack)
   <$> noTermString
         ( some $ alphaNum <|> oneOf "/_-" )
   <?> "command-identifier"

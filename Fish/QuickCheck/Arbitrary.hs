@@ -5,22 +5,23 @@ import Test.QuickCheck hiding (Args)
 import Fish.Lang
 import qualified Data.Text as T
 import qualified Data.Char as C
+import Data.NText
 
-genVarIdent = T.pack
+genVarIdent = mkNText . T.pack
   <$> ( listOf1
         ( arbitrary `suchThat` f)
         `suchThat` ( C.isLetter . head ) )
   where
     f c = C.isAlphaNum c || (=='_') c
 
-genFunIdent = T.pack
+genFunIdent = mkNText . T.pack
   <$> ( listOf1
         ( arbitrary `suchThat` C.isAlphaNum )
         `suchThat` ( C.isLetter . head ) )
   where
     f c = C.isAlphaNum c || (=='_') c || (=='-') c
 
-genCmdIdent = T.pack
+genCmdIdent = mkNText . T.pack
   <$> ( listOf1
         ( arbitrary `suchThat` C.isAlphaNum )
         `suchThat` ( C.isLetter . head ) )

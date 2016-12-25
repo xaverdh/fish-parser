@@ -1,6 +1,7 @@
 {-# language LambdaCase, OverloadedStrings, FlexibleInstances #-}
 module Fish.UnParser.UnParser where
 
+import Data.NText
 import Data.Monoid
 import Data.String (fromString)
 import qualified Data.Text as T
@@ -243,13 +244,13 @@ instance Unparse Glob where
     QMarkGl -> "?"
 
 instance Unparse (VarIdent T.Text t) where
-  unparse (VarIdent _ s) = s
+  unparse (VarIdent _ s) = extractText s
 
 instance Unparse (FunIdent T.Text t) where
-  unparse (FunIdent _ s) = s
+  unparse (FunIdent _ s) = extractText s
 
 instance Unparse (CmdIdent T.Text t) where
-  unparse (CmdIdent _ s) = s
+  unparse (CmdIdent _ s) = extractText s
 
 instance Unparse (Redirect T.Text t) where
   unparse = unparseRedirect
