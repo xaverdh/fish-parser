@@ -108,8 +108,10 @@ setSt = symN "set" *>
 data SetMode = Erase | Query | Setting
 
 setCommand :: PC m => P m (SetCommand T.Text ())
-setCommand = try setSQE <|> setList
+setCommand = try setSQE <|> try setHelp <|> setList
   where
+    setHelp = SetHelp <$ ( symN "--help" <|> symN "-h" )
+    
     setList = permute ( SetList
       <$?> (Nothing,Just <$> scope)
       <|?> (Nothing,Just <$> export)

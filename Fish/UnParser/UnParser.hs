@@ -109,6 +109,7 @@ unparseSetSt = (("set" <> " ") <>) . \case
     "-e" <> " "
     <> unparseMScope mscope
     <> unWords (map unparse $ N.toList vdefs)
+  SetHelp -> "--help"
   where
     unparseMScope = maybe "" unparseSp
     unparseMExport = maybe "" unparseSp
