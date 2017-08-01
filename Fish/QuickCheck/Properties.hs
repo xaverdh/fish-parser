@@ -11,7 +11,7 @@ import Fish.UnParser.UnParser
 
 import Fish.QuickCheck.Arbitrary
 
-import Data.Monoid
+import Data.Semigroup
 import qualified Data.Text as T
 import Data.Attoparsec.Text
 import Test.QuickCheck hiding (Args)

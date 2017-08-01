@@ -2,7 +2,7 @@
 module Fish.UnParser.UnParser where
 
 import Data.NText
-import Data.Monoid
+import Data.Semigroup
 import Data.String (fromString)
 import qualified Data.Text as T
 import qualified Data.List.NonEmpty as N
@@ -12,7 +12,7 @@ import Fish.UnParser.Quote
 
 quote = quoteSQ
 
-mintcal :: Monoid m => m -> [m] -> m
+mintcal :: (Semigroup m,Monoid m) => m -> [m] -> m
 mintcal s = \case
   [] -> mempty
   xs -> foldr1 (\x y -> x <> s <> y) xs

@@ -13,7 +13,7 @@ import Text.Parser.LookAhead
 import Text.Parser.Char hiding (space,spaces)
 import Data.Functor
 import Data.Bool
-import Data.Monoid
+import Data.Semigroup hiding (option)
 import Data.NText
 import qualified Data.Char as C
 import qualified Data.Text as T

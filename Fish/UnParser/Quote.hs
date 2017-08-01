@@ -7,7 +7,7 @@ module Fish.UnParser.Quote (
 
 import qualified Data.Text as T
 import qualified Data.Char as C
-import Data.Monoid
+import Data.Semigroup
 
 quoteSQ :: T.Text -> T.Text
 quoteSQ s =
