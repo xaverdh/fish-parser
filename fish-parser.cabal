@@ -31,7 +31,7 @@ library
   exposed-modules:     Fish.UnParser.Quote Fish.UnParser.UnParser Fish.Parser.Redirect, Fish.Parser.Common, Fish.Parser.Glob, Fish.Parser.Parser, Fish.Parser.Gen
   -- other-modules:       
   -- other-extensions:    many ... todo: fill this in
-  build-depends:       base >=4.9 && <4.10
+  build-depends:       base >=4.9 && <4.11
   build-depends:       mtl >=2.2.1 && <2.3
   build-depends:       parsers >= 0.12.4 && < 0.13
   build-depends:       text >= 1.2.2 && < 1.3
