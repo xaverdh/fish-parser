@@ -286,7 +286,7 @@ procE = ProcE ()
 homeDirE :: PC m => P m (Expr T.Text ())
 homeDirE = char '~' $> HomeDirE () <?> "~"
 
-redirect :: PC m => P m (Redirect T.Text ())
+redirect :: PC m => P m (Redirect (Expr T.Text ()))
 redirect = Redirect.redirect (lexemeN expr)
 
 ref :: PC m => P m i -> P m (Ref i)

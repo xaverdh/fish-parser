@@ -191,7 +191,8 @@ unparseNotSt :: Stmt T.Text t -> T.Text
 unparseNotSt st =
   "not" <> " " <> unparse st
 
-unparseRedirectedSt :: Stmt T.Text t -> N.NonEmpty (Redirect T.Text t) -> T.Text
+unparseRedirectedSt :: Stmt T.Text t
+  -> N.NonEmpty (Redirect (Expr T.Text t)) -> T.Text
 unparseRedirectedSt st redirs =
   unparseSp st
   <> unWords (map unparse $ N.toList redirs)
@@ -253,10 +254,10 @@ instance Unparse (FunIdent T.Text t) where
 instance Unparse (CmdIdent T.Text t) where
   unparse (CmdIdent _ s) = extractText s
 
-instance Unparse (Redirect T.Text t) where
+instance Unparse e => Unparse (Redirect e) where
   unparse = unparseRedirect
 
-unparseRedirect :: Redirect T.Text t -> T.Text
+unparseRedirect :: Unparse e => Redirect e -> T.Text
 unparseRedirect = \case
   RedirectClose fd ->
     unparseFdL True fd <> "&-"

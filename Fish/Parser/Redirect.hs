@@ -11,7 +11,7 @@ import Data.Maybe
 import Control.Applicative
 import Control.Monad
 
-redirect :: PC m => P m (Expr s t) -> P m (Redirect s t)
+redirect :: PC m => P m e -> P m (Redirect e)
 redirect exp = do
   (fd,tk) <- redirectL
   redirectR exp fd tk
@@ -27,7 +27,7 @@ redirectL = try $ do
     TkErr _ -> maybe (return Fd2) (const mzero) mfd
 
 redirectR :: PC m
-  => P m (Expr s t) -> Fd -> RedirTk -> P m (Redirect s t)
+  => P m e -> Fd -> RedirTk -> P m (Redirect e)
 redirectR exp fd tk = 
   parseEither fdR (spaces *> exp) >>= \case
     Left mfdr -> case mfdr of
