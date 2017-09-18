@@ -1,4 +1,5 @@
-{-# language LambdaCase, TupleSections, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE LambdaCase, TupleSections, OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Fish.Parser.Parser where
 
 import qualified Fish.Parser.Redirect as Redirect
@@ -6,6 +7,7 @@ import Fish.Parser.Common
 import Fish.Parser.Gen
 import Fish.Parser.Glob
 import Fish.Lang
+import Fish.Lang.Unit
 
 import Text.Parser.Permutation
 import Text.Parser.Combinators
