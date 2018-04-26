@@ -248,8 +248,7 @@ expr = do
             ,cmdSubstE
             ,bracesE
             ,globE
-            ,homeDirE
-            ,procE ] )
+            ,homeDirE ] )
 
     intE = (StringE () . pack)
       <$> some (digit <|> char '-' <|> char '+')
@@ -279,11 +278,6 @@ globE :: PC m => P m (Expr T.Text ())
 globE = GlobE ()
   <$> glob
   <?> "glob-pattern"
-
-procE :: PC m => P m (Expr T.Text ())
-procE = ProcE ()
-  <$> (char '%' *> expr)
-  <?> "process-expansion"
 
 homeDirE :: PC m => P m (Expr T.Text ())
 homeDirE = char '~' $> HomeDirE () <?> "~"
