@@ -60,12 +60,11 @@ instance Arbitrary t => Arbitrary (Expr T.Text t) where
   arbitrary = scale (`div`2) $ oneof
     [ StringE <$> arbitrary <*> arbitrary
       ,GlobE <$> arbitrary <*> arbitrary
-      ,ProcE <$> arbitrary <*> arbitrary
       ,HomeDirE <$> arbitrary
       ,VarRefE <$> arbitrary <*> arbitrary <*> arbitrary
       ,BracesE <$> arbitrary <*> arbitrary
       ,CmdSubstE <$> arbitrary <*> arbitrary
-      ,ConcatE <$> arbitrary <*> exprNoProcE <*> arbitrary ]
+      ,ConcatE <$> arbitrary <*> arbitrary <*> arbitrary ]
 
 instance Arbitrary t => Arbitrary (SetCommand T.Text t) where
   arbitrary = oneof
@@ -80,11 +79,6 @@ instance Arbitrary Scope where
 instance Arbitrary Export where
   arbitrary = arbitraryBoundedEnum
 
-exprNoProcE :: Arbitrary t => Gen (Expr T.Text t)
-exprNoProcE = 
-  arbitrary `suchThat` \case
-    ProcE _ _ -> False
-    _ -> True
 
 instance Arbitrary T.Text where
   arbitrary = T.pack <$> arbitrary
@@ -107,7 +101,7 @@ instance Arbitrary Fd where
 instance Arbitrary FileMode where
   arbitrary = arbitraryBoundedEnum
 
-instance Arbitrary t => Arbitrary (Redirect T.Text t) where
+instance Arbitrary e => Arbitrary (Redirect e) where
   arbitrary = scale (`div`2) $ do
     fd <- arbitrary
     oneof

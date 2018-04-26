@@ -202,7 +202,6 @@ instance Unparse (Expr T.Text t) where
   unparse = \case
     StringE _ s -> quote s
     GlobE _ g -> unparse g
-    ProcE _ e -> "%" <> unparse e
     HomeDirE _ -> "~"
     VarRefE _ q vref -> 
       if q 
