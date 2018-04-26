@@ -39,11 +39,9 @@ type PC m =
 --
 --   * '_quoted' is toggled by entering a double quote type string,
 --   * '_array' is toggled by entering an array index expression [..]
---   * '_cmdSubst' is toggled by entering a command substitution (..)
 data Context = Context {
     _quoted :: Bool
     ,_array :: Bool
-    ,_cmdSubst :: Bool
   }
 makeLenses ''Context
 
@@ -140,14 +138,10 @@ sym1 = lexeme1 . void . string
 symN :: PC m => String -> P m ()
 symN = lexemeN . void . string
 
--- | Skip over a number of statement seperators,
--- the meaning of which depends on the cmdSubst 'Context' switch.
+-- | Skip over a number of statement seperators.
 stmtSep :: PC m => P m ()
-stmtSep = do
-  c <- view cmdSubst
-  if c
-    then skipMany (void (char ';') <* spaces)
-    else skipMany (seps1 <* spaces)
+stmtSep =
+  skipMany (seps1 <* spaces)
   <?> "statement seperator"
   where
     sep = satisfy $ (||) <$> (== '\n') <*> (==';')
@@ -156,12 +150,9 @@ stmtSep = do
 -- | Like 'stmtSep', but make sure at least one
 --   newline / semicolon was consumed.
 stmtSep1 :: PC m => P m ()
-stmtSep1 = do
-  c <- view cmdSubst
-  if c
-    then skipSome (void (char ';') <* spaces)
-    else ( skipSome (seps1 <* spaces)
-           <|> (void . lookAhead) (char '#' <?> "comment") )
+stmtSep1 =
+  skipSome (seps1 <* spaces)
+  <|> (void . lookAhead) (char '#' <?> "comment")
   <?> "statement seperator"
   where
     sep = satisfy $ (||) <$> (== '\n') <*> (==';')
