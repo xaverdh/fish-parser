@@ -52,7 +52,7 @@ library
   
   if flag(trifecta)
     exposed-modules: Fish.Parser.Trifecta
-    build-depends: trifecta >= 1.6 && < 1.8
+    build-depends: trifecta >= 2 && < 2.1
   if flag(parsec)
     exposed-modules: Fish.Parser.Parsec
     build-depends: parsec >=3.1 && <3.2
