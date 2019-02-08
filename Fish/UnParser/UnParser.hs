@@ -242,7 +242,6 @@ instance Unparse Glob where
   unparse = \case
     StarGl -> "*"
     DiStarGl -> "**"
-    QMarkGl -> "?"
 
 instance Unparse (VarIdent T.Text t) where
   unparse (VarIdent _ s) = extractText s
