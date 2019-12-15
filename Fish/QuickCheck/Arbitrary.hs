@@ -1,7 +1,7 @@
 {-# language LambdaCase, FlexibleInstances #-}
 module Fish.QuickCheck.Arbitrary where
 
-import Test.QuickCheck hiding (Args)
+import Test.QuickCheck
 import Fish.Lang
 import qualified Data.Text as T
 import qualified Data.Char as C
@@ -31,8 +31,8 @@ genCmdIdent = mkNText . T.pack
 instance Arbitrary t => Arbitrary (Prog T.Text t) where
   arbitrary = Prog <$> arbitrary <*> arbitrary
 
-instance Arbitrary t => Arbitrary (Args T.Text t) where
-  arbitrary = Args <$> arbitrary <*> arbitrary
+instance Arbitrary t => Arbitrary (Exprs T.Text t) where
+  arbitrary = Exprs <$> arbitrary <*> arbitrary
 
 instance Arbitrary t => Arbitrary (CompStmt T.Text t) where
   arbitrary = scale (`div`2) $ oneof
@@ -43,8 +43,7 @@ instance Arbitrary t => Arbitrary (CompStmt T.Text t) where
 instance Arbitrary t => Arbitrary (Stmt T.Text t) where
   arbitrary = scale (`div`2) $ oneof
     [ CommentSt <$> arbitrary <*> arbitrary
-      ,CmdSt <$> arbitrary <*> arbitrary <*> arbitrary
-      ,SetSt <$> arbitrary <*> arbitrary
+      ,CmdSt <$> arbitrary <*> arbitrary
       ,FunctionSt <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
       ,WhileSt <$> arbitrary <*> arbitrary <*> arbitrary
       ,ForSt <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
@@ -65,20 +64,6 @@ instance Arbitrary t => Arbitrary (Expr T.Text t) where
       ,BracesE <$> arbitrary <*> arbitrary
       ,CmdSubstE <$> arbitrary <*> arbitrary
       ,ConcatE <$> arbitrary <*> arbitrary <*> arbitrary ]
-
-instance Arbitrary t => Arbitrary (SetCommand T.Text t) where
-  arbitrary = oneof
-    [ SetSetting <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-      ,SetList <$> arbitrary <*> arbitrary <*> arbitrary
-      ,SetQuery <$> arbitrary <*> arbitrary <*> arbitrary
-      ,SetErase <$> arbitrary <*> arbitrary ]
-
-instance Arbitrary Scope where
-  arbitrary = arbitraryBoundedEnum
-
-instance Arbitrary Export where
-  arbitrary = arbitraryBoundedEnum
-
 
 instance Arbitrary T.Text where
   arbitrary = T.pack <$> arbitrary

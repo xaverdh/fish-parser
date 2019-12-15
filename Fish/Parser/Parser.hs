@@ -40,8 +40,8 @@ progN = stmtSep1 *>
     <$> (compStmt `sepEndBy` stmtSep1) )
   <?> "code-block"
 
-args :: PC m => P m (Args T.Text ())
-args = Args ()
+exprs :: PC m => P m (Exprs T.Text ())
+exprs = Exprs ()
   <$> (expr `sepEndBy` spaces1)
   <?> "expressions"
 
@@ -78,7 +78,6 @@ stmt = do
     
     plain = choice [
         commentSt
-        ,setSt
         ,funSt
         ,whileSt
         ,forSt
@@ -97,75 +96,14 @@ commentSt = (CommentSt () . T.pack)
   <?> "comment-statement"
 
 cmdSt :: PC m => P m (Stmt T.Text ())
-cmdSt = CmdSt ()
-  <$> lexemeN cmdIdent
-  <*> args
+cmdSt = CmdSt () <$> (expr `sepEndByNonEmpty` spaces1)
   <?> "command-statement"
-
-setSt :: PC m => P m (Stmt T.Text ())
-setSt = symN "set" *>
-  ( SetSt () <$> setCommand )
-  <?> "set-statement"
-
-data SetMode = Erase | Query | Setting
-
-setCommand :: PC m => P m (SetCommand T.Text ())
-setCommand = try setSQE <|> try setHelp <|> setList
-  where
-    setHelp = SetHelp <$ ( symN "--help" <|> symN "-h" )
-    
-    setList = permute ( SetList
-      <$?> (Nothing,Just <$> scope)
-      <|?> (Nothing,Just <$> export)
-      <|?> (False,flag True "n" "names") )
-      `evalStateT` False
-    setSQE = do
-      (fmode,mscp,fexport) <- permute
-        ( (,,)
-          <$?> (Setting,mode)
-          <|?> (Nothing,Just <$> scope)
-          <|?> (Nothing,Just <$> export) )
-        `evalStateT` False
-      case fmode of
-        Setting ->
-          SetSetting mscp fexport
-          <$> lexemeN varDef
-          <*> args
-        Erase ->
-          SetErase mscp . N.fromList <$> some (lexemeN varDef)
-        Query ->
-          SetQuery mscp fexport <$> args
-
-    scope = choice
-      [ flag ScopeLocal "l" "local"
-       ,flag ScopeGlobal "g" "global"
-       ,flag ScopeUniversal "U" "universal" ]
-
-    export = choice
-      [ flag Export "x" "export"
-       ,flag UnExport "u" "unexport" ]
-
-    mode = choice
-      [ flag Erase "e" "erase"
-       ,flag Query "q" "query" ]
-    
-    symN' s = lift $ symN s
-    
-    flag value short long =
-      get >>= \case
-        True -> value <$
-          ( symN' short <* put False
-            <|> (void . string) short )
-        False -> value <$
-          ( symN' ("-" <> short)
-            <|> (try . void . string) ("-" <> short) <* put True
-            <|> symN' ("--" <> long) )
 
 funSt :: PC m => P m (Stmt T.Text ())
 funSt = sym1 "function" *> (
     FunctionSt ()
     <$> lexemeN funIdent
-    <*> args
+    <*> exprs
     <*> progN
   ) <* symN "end"
   <?> "function-statement"
@@ -181,7 +119,7 @@ forSt :: PC m => P m (Stmt T.Text ())
 forSt = sym1 "for" *>
   ( ForSt ()
     <$> (lexeme1 varIdent <* sym1 "in")
-    <*> args
+    <*> exprs
     <*> progN ) <* symN "end"
   <?> "for-statement"
 
@@ -316,14 +254,6 @@ varRef = VarRef ()
     name = char '$' *> 
       parseEither varRef varIdent
 
-varDef :: PC m => P m (VarDef T.Text ())
-varDef = VarDef ()
-  <$> name
-  <*> ref expr
-  <?> "variable-definition"
-  where
-    name = varIdent
-
 strlike :: PC m => P m (Expr T.Text ())
 strlike = 
   strSQ
@@ -422,12 +352,4 @@ funIdent :: PC m => P m (FunIdent T.Text ())
 funIdent = (FunIdent () . mkNText . T.pack)
   <$> some ( alphaNum <|> oneOf "_-" )
   <?> "function-identifier"
-
-cmdIdent :: PC m => P m (CmdIdent T.Text ())
-cmdIdent = (CmdIdent () . mkNText . T.pack)
-  <$> noTermString
-        ( some $ alphaNum <|> oneOf "/_-" )
-  <?> "command-identifier"
-  where
-    noTermString = mfilter $ not . (`elem` ["end","else","case"])
 

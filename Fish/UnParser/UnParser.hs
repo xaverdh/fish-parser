@@ -3,22 +3,26 @@ module Fish.UnParser.UnParser where
 
 import Data.NText
 import Data.Semigroup
-import Data.String (fromString)
+import Data.String (fromString,IsString)
 import qualified Data.Text as T
 import qualified Data.List.NonEmpty as N
+import qualified Data.Foldable as F
 import Control.Applicative
 import Fish.Lang
 import Fish.UnParser.Quote
 
 quote = quoteSQ
 
-mintcal :: (Semigroup m,Monoid m) => m -> [m] -> m
-mintcal s = \case
+mintcal :: (Foldable t,Monoid m) => m -> t m -> m
+mintcal s ms = case F.toList ms of
   [] -> mempty
   xs -> foldr1 (\x y -> x <> s <> y) xs
 
-unLines = mintcal "\n"
-unWords = mintcal " "
+unLines :: (Foldable t,Monoid m,IsString m) => t m -> m
+unLines = mintcal $ fromString "\n"
+
+unWords :: (Foldable t,Monoid m,IsString m) => t m -> m
+unWords = mintcal $ fromString " "
 
 class Unparse a where
   unparse :: a -> T.Text
@@ -33,8 +37,8 @@ instance Unparse (Prog T.Text t) where
   unparse (Prog _ sts) = 
     mconcat $ map unparseLn sts
 
-instance Unparse (Args T.Text t) where
-  unparse (Args _ es) = 
+instance Unparse (Exprs T.Text t) where
+  unparse (Exprs _ es) = 
     unWords (map unparse es)
 
 instance Unparse (CompStmt T.Text t) where
@@ -54,15 +58,14 @@ instance Unparse (Stmt T.Text t) where
   unparse = \case
     CommentSt _ s ->
       unparseCommentSt s
-    CmdSt _ cmdi args ->
-      unparseCmdSt cmdi args
-    SetSt _ setcmd -> unparseSetSt setcmd
-    FunctionSt _ funi args prog ->
-      unparseFunctionSt funi args prog
+    CmdSt _ exprs ->
+      unparseCmdSt exprs
+    FunctionSt _ funi exprs prog ->
+      unparseFunctionSt funi exprs prog
     WhileSt _ st prog ->
       unparseWhileSt st prog
-    ForSt _ vari args prog ->
-      unparseForSt vari args prog
+    ForSt _ vari exprs prog ->
+      unparseForSt vari exprs prog
     IfSt _ clauses mfinal ->
       unparseIfSt clauses mfinal
     SwitchSt _ e cases ->
@@ -81,55 +84,14 @@ instance Unparse (Stmt T.Text t) where
 unparseCommentSt :: T.Text -> T.Text
 unparseCommentSt = ("#" <>)
 
-unparseCmdSt :: CmdIdent T.Text t -> Args T.Text t -> T.Text
-unparseCmdSt cmdi args =
-  unparseSp cmdi
-  <> unparse args
+unparseCmdSt :: N.NonEmpty (Expr T.Text t) -> T.Text
+unparseCmdSt exprs = unWords (fmap unparse exprs)
 
-instance Unparse t => Unparse (SetCommand T.Text t) where
-  unparse = unparseSetSt
-
-unparseSetSt :: SetCommand T.Text t -> T.Text
-unparseSetSt = (("set" <> " ") <>) . \case
-  SetSetting mscope mexport vdef args ->
-    unparseMScope mscope
-    <> unparseMExport mexport
-    <> unparseSp vdef
-    <> unparse args
-  SetList mscope mexport namesOnly ->
-    if namesOnly then "-n" <> " " else ""
-    <> unparseMExport mexport
-    <> unparseMScope mscope
-  SetQuery mscope mexport args ->
-    "-q" <> " "
-    <> unparseMScope mscope
-    <> unparseMExport mexport
-    <> unparse args
-  SetErase mscope vdefs ->
-    "-e" <> " "
-    <> unparseMScope mscope
-    <> unWords (map unparse $ N.toList vdefs)
-  SetHelp -> "--help"
-  where
-    unparseMScope = maybe "" unparseSp
-    unparseMExport = maybe "" unparseSp
-
-instance Unparse Scope where
-  unparse = \case
-    ScopeLocal -> "-l"
-    ScopeGlobal -> "-g"
-    ScopeUniversal -> "-U"
-
-instance Unparse Export where
-  unparse = \case
-    Export -> "-x"
-    UnExport -> "-u"
-
-unparseFunctionSt :: FunIdent T.Text t -> Args T.Text t -> Prog T.Text t -> T.Text
-unparseFunctionSt funi args prog =
+unparseFunctionSt :: FunIdent T.Text t -> Exprs T.Text t -> Prog T.Text t -> T.Text
+unparseFunctionSt funi exprs prog =
   "function" <> " "
   <> unparseSp funi
-  <> unparseLn args
+  <> unparseLn exprs
   <> unparseLn prog
   <> "end"
 
@@ -140,12 +102,12 @@ unparseWhileSt st prog =
   <> unparseLn prog
   <> "end"
 
-unparseForSt :: VarIdent T.Text t -> Args T.Text t -> Prog T.Text t -> T.Text
-unparseForSt vari args prog =
+unparseForSt :: VarIdent T.Text t -> Exprs T.Text t -> Prog T.Text t -> T.Text
+unparseForSt vari exprs prog =
   "for" <> " "
   <> unparseSp vari
   <> "in" <> " "
-  <> unparseLn args
+  <> unparseLn exprs
   <> unparseLn prog
   <> "end"
 
@@ -216,11 +178,6 @@ instance Unparse (CmdRef T.Text t) where
     "(" <> mintcal " ; " (map unparse sts) <> ")"
     <> unparseRef ref
 
-instance Unparse (VarDef T.Text t) where
-  unparse (VarDef _ name ref) = 
-    unparse name
-    <> unparseRef ref
-
 instance Unparse (VarRef T.Text t) where
   unparse (VarRef _ name ref) = 
     "$" <>
@@ -248,9 +205,6 @@ instance Unparse (VarIdent T.Text t) where
 
 instance Unparse (FunIdent T.Text t) where
   unparse (FunIdent _ s) = extractText s
-
-instance Unparse (CmdIdent T.Text t) where
-  unparse (CmdIdent _ s) = extractText s
 
 instance Unparse e => Unparse (Redirect e) where
   unparse = unparseRedirect
